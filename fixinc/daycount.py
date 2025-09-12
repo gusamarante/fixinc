@@ -8,5 +8,3 @@ class DayCount:
 
     def _get_holidays(self):
         return self.calendar  # TODO implement
-
-

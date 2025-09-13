@@ -1,10 +1,16 @@
 from fixinc.holidays import ANBIMA, USTrading
 from pandas import to_datetime, Timestamp, Series
-from numpy import busday_offset, busdaycalendar, busday_count, datetime64, ndarray
+from numpy import (
+    busdaycalendar,
+    busday_count,
+    busday_offset,
+    datetime64,
+    ndarray,
+)
 
 class DayCount:
-    # TODO document everything
     # TODO test with dates as strings, datetime and timestamp
+    # TODO test with array-like offsets
     dibd = {
         "bus/252": 252,
         "act/365": 365,
@@ -15,6 +21,41 @@ class DayCount:
     weekmask = "Mon Tue Wed Thu Fri"
 
     def __init__(self, calendar=None, dcc='act/365', adj=None, adjust_offset=0):
+        """
+        Day-counting functionalities for fixed income.
+
+        Parameters
+        ----------
+        calendar : str or None, optional
+            Calendar identifier used to determine holidays. Supported values:
+            - 'anbima' : Brazilian ANBIMA calendar
+            - 'us_trading' : US trading calendar (general, not specific to any
+                             exchange)
+            - None: No holiday calendar (default)
+
+        dcc: str
+            Day count convention. Supported values:
+            - 'act/365': Actual days over 365
+            - 'act/360': Actual days over 360
+            - 'bus/252': Business days over 252
+
+        adj : str, optional
+            Adjustment rule for rolling non-business days. If None, no rolling
+            is applied. Supported values:
+            - 'following': Adjusted date is the following business day
+            - 'preceding': Adjusted date is the preceding business day
+            - 'modifiedfollowing': Adjusted date is the following business day
+                                   unless the day is in the next calendar month,
+                                   in which case the adjusted date is the
+                                   preceding business day
+            - 'modifiedpreceding': Adjusted date is the preceding business day
+                                   unless the day is in the previous calendar
+                                   month, in which case the adjusted date is the
+                                   following business day
+
+        adjust_offset : int, default 0
+            Additional offset (in business days) applied during adjustment
+        """
 
         assert dcc in self.dc_methods, f"day count convention {dcc} not implemented"
 
@@ -26,12 +67,38 @@ class DayCount:
         self.npcal = busdaycalendar(weekmask=self.weekmask, holidays=self.holidays)
 
     def adjust(self, d):
+        """
+        Adjust a given date according to the business day calendar and rolling
+        rule
+
+        Parameters
+        ----------
+        d: str, pandas.Timestamp, numpy.datetime64, or array-like
+            Input date or dates to adjust
+        """
         if self.adj is None:
             return to_datetime(d)
         else:
             return to_datetime(busday_offset(d, offsets=self.adjust_offset, roll=self.adj, busdaycal=self.npcal))
 
     def days(self, d1, d2):
+        """
+        Compute the number of days between two dates under the selected day
+        count convention
+
+        Parameters
+        ----------
+        d1: str, pandas.Timestamp, numpy.datetime64, or array-like
+            Start date(s)
+
+        d2: str, pandas.Timestamp, numpy.datetime64, or array-like
+            End date(s)
+
+        Returns
+        -------
+        int or numpy.ndarray
+        """
+
         # Ensure dates are in the right format and properly rolled if necessary
         d1 = self.adjust(d1)
         d2 = self.adjust(d2)
@@ -48,6 +115,22 @@ class DayCount:
             raise NotImplementedError(f"day count convention not implemented in the `days` method")
 
     def daysnodc(self, d1, d2):
+        """
+        Compute the actual number of calendar days between two dates, ignoring
+        the day count convention
+
+        Parameters
+        ----------
+        d1: str, pandas.Timestamp, numpy.datetime64, or array-like
+            Start date(s)
+
+        d2: str, pandas.Timestamp, numpy.datetime64, or array-like
+            End date(s)
+
+        Returns
+        -------
+        int or numpy.ndarray
+        """
         # Ensure dates are in the right format and properly rolled if necessary
         d1 = self.adjust(d1)
         d2 = self.adjust(d2)
@@ -58,6 +141,24 @@ class DayCount:
             return (d2 - d1).days.values
 
     def workday(self, d, offset=0):
+        """
+        Shift a date by a given number of business days, according to the
+        configured calendar and rolling rule. Same behavior as the `WORKDAY`
+        function from Microsoft Excel.
+
+        Parameters
+        ----------
+        d: str, pandas.Timestamp, numpy.datetime64, or array-like
+            Input date(s) to be shifted
+
+        offset: int, or numpy.ndarray
+            Number of business days to shift. If array-like, all values must
+            have the same sign.
+
+        Returns
+        -------
+        pandas.Timestamp or pandas.DatetimeIndex
+        """
         d = self._cast_numpy_date(d)
 
         if self.adj is None and isinstance(offset, int):
@@ -82,6 +183,22 @@ class DayCount:
         return to_datetime(nd)
 
     def year_fraction(self, d1, d2):
+        """
+        Compute the year fraction between two dates under the selected day
+        count convention
+
+        Parameters
+        ----------
+        d1: str, pandas.Timestamp, numpy.datetime64, or array-like
+            Start date(s)
+
+        d2: str, pandas.Timestamp, numpy.datetime64, or array-like
+            End date(s)
+
+        Returns
+        -------
+        float or numpy.ndarray
+        """
         # Ensure dates are in the right format and properly rolled if necessary
         d1 = self.adjust(d1)
         d2 = self.adjust(d2)

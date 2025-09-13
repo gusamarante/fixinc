@@ -9,8 +9,7 @@ from numpy import (
 )
 
 class DayCount:
-    # TODO test with dates as strings, datetime and timestamp
-    # TODO test with array-like offsets
+    # TODO test if daycount are correct
     dibd = {
         "bus/252": 252,
         "act/365": 365,
@@ -73,9 +72,10 @@ class DayCount:
 
         Parameters
         ----------
-        d: str, pandas.Timestamp, numpy.datetime64, or array-like
+        d: str, pandas.Timestamp, pandas.Series, numpy.datetime64, or array-like
             Input date or dates to adjust
         """
+        d = self._cast_numpy_date(d)
         if self.adj is None:
             return to_datetime(d)
         else:
@@ -88,10 +88,10 @@ class DayCount:
 
         Parameters
         ----------
-        d1: str, pandas.Timestamp, numpy.datetime64, or array-like
+        d1: str, pandas.Timestamp, pandas.Series, numpy.datetime64, or array-like
             Start date(s)
 
-        d2: str, pandas.Timestamp, numpy.datetime64, or array-like
+        d2: str, pandas.Timestamp, pandas.Series, numpy.datetime64, or array-like
             End date(s)
 
         Returns
@@ -189,10 +189,10 @@ class DayCount:
 
         Parameters
         ----------
-        d1: str, pandas.Timestamp, numpy.datetime64, or array-like
+        d1: str, pandas.Timestamp, pandas.Series, numpy.datetime64, or array-like
             Start date(s)
 
-        d2: str, pandas.Timestamp, numpy.datetime64, or array-like
+        d2: str, pandas.Timestamp, pandas.Series, numpy.datetime64, or array-like
             End date(s)
 
         Returns

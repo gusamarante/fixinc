@@ -1,19 +1,22 @@
 import pandas as pd
 from fixinc.daycount import DayCount
+from fixinc.compounder import RateCompounder
 
 
 class Bond:
+    # TODO Implement:
+    #  - Duration
+    #  - DV01
 
     def __init__(self, cashflows, calendar, dcc, yc):
         # TODO Documentation
         self.cashflows = cashflows
         self.dc = DayCount(calendar=calendar, dcc=dcc)
-        self.comp = 1  # TODO Compounder
+        self.rc = RateCompounder(yc=yc)
 
     def yield2price(self, t, y):
         # TODO Documentation
-        yf = self.dc.year_fraction(t, self.cashflows.index)
-        disc = 1 / ((1 + y) ** yf)
+        disc = self.rc.yield_to_disc(y, t, self.cashflows.index)
         pv = (self.cashflows * disc).sum()
         return pv
 
@@ -25,6 +28,7 @@ b = Bond(
     cashflows=cf,
     calendar="us_trading",
     dcc="act/365",
+    yc='compound',
 )
 print(b.yield2price(t=pd.to_datetime('today').normalize(), y=0.05))
 

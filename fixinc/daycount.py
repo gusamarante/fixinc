@@ -9,7 +9,7 @@ from numpy import (
 )
 
 class DayCount:
-    # TODO test if daycount are correct
+    # TODO test if daycounts are correct
     dibd = {
         "bus/252": 252,
         "act/365": 365,

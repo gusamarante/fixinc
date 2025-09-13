@@ -75,6 +75,3 @@ class RateCompounder:
         float or numpy.ndarray
         """
         return 1 / self.yield_to_factor(y, d1, d2)
-
-# ===== EXAMPLE =====
-rc = RateCompounder()

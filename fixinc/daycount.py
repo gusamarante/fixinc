@@ -1,12 +1,15 @@
-import pandas as pd
-
 from fixinc.holidays import ANBIMA, USTrading
-from pandas import to_datetime
-from numpy import busday_offset, busdaycalendar, busday_count, datetime64
+from pandas import to_datetime, Timestamp, Series
+from numpy import busday_offset, busdaycalendar, busday_count, datetime64, ndarray
 
 class DayCount:
     # TODO document everything
     # TODO test with dates as strings, datetime and timestamp
+    dibd = {
+        "bus/252": 252,
+        "act/365": 365,
+        "act/360": 360,
+    }
     dc_methods = ['act/365', 'act/360', 'bus/252']
     roll_methods = ['following', 'preceding', 'modifiedfollowing', 'modifiedpreceding']
     weekmask = "Mon Tue Wed Thu Fri"
@@ -29,23 +32,13 @@ class DayCount:
             return to_datetime(busday_offset(d, offsets=self.adjust_offset, roll=self.adj, busdaycal=self.npcal))
 
     def days(self, d1, d2):
-
         # Ensure dates are in the right format and properly rolled if necessary
         d1 = self.adjust(d1)
         d2 = self.adjust(d2)
 
         if self.dcc == 'bus/252':
-            # Convert to numpy format
-            if not isinstance(d1, pd.Timestamp):
-                d1 = d1.values.astype("datetime64[D]")
-            else:
-                d1 = datetime64(d1).astype("datetime64[D]")
-
-            if not isinstance(d2, pd.Timestamp):
-                d2 = d2.values.astype("datetime64[D]")
-            else:
-                d2 = datetime64(d2).astype("datetime64[D]")
-
+            d1 = self._cast_numpy_date(d1)
+            d2 = self._cast_numpy_date(d2)
             return busday_count(d1, d2, weekmask=self.weekmask, holidays=self.holidays)
 
         elif self.dcc in ['act/360', 'act/365']:
@@ -55,20 +48,73 @@ class DayCount:
             raise NotImplementedError(f"day count convention not implemented in the `days` method")
 
     def daysnodc(self, d1, d2):
-        pass
+        # Ensure dates are in the right format and properly rolled if necessary
+        d1 = self.adjust(d1)
+        d2 = self.adjust(d2)
+
+        if isinstance(d1, Timestamp) and isinstance(d2, Timestamp):
+            return (d2 - d1).days
+        else:
+            return (d2 - d1).days.values
+
+    def workday(self, d, offset=0):
+        d = self._cast_numpy_date(d)
+
+        if self.adj is None and isinstance(offset, int):
+            if offset >= 0:
+                adj = "preceding"
+            else:
+                adj = "following"
+            nd = busday_offset(d, offsets=offset, busdaycal=self.npcal, roll=adj)
+
+        elif self.adj is None and (isinstance(offset, ndarray) or isinstance(offset, Series)):
+            if all(offset >= 0):
+                adj = "preceding"
+            elif all(offset < 0):
+                adj = "following"
+            else:
+                raise NotImplementedError("If offset is an array like structure, then all values must have the same sign")
+            nd = busday_offset(d, offsets=offset, busdaycal=self.npcal, roll=adj)
+
+        else:
+            nd = busday_offset(d, offsets=offset, busdaycal=self.npcal, roll=self.adj)
+
+        return to_datetime(nd)
+
+    def year_fraction(self, d1, d2):
+        # Ensure dates are in the right format and properly rolled if necessary
+        d1 = self.adjust(d1)
+        d2 = self.adjust(d2)
+
+        # Save adjustment state and set it to none, so we can safely use the
+        # days and dib functions of "date splits" we produce in for some
+        # day counts
+        adj_state = self.adj
+        self.adj = None
+        yf  = self.days(d1, d2) / self.dibd[self.dcc]
+        self.adj = adj_state
+        return yf
+
+    @staticmethod
+    def _cast_numpy_date(d):
+        d = to_datetime(d)
+
+        # Convert to numpy format
+        if not isinstance(d, Timestamp):
+            d = d.values.astype("datetime64[D]")
+        else:
+            d = datetime64(d).astype("datetime64[D]")
+
+        return d
 
     def _get_holidays(self):
         if self.calendar == "anbima":
             return list(ANBIMA().holidays().date)
+
+        if self.calendar == "us_trading":
+            return list(USTrading().holidays().date)
+
         elif self.calendar is None:
             return []
         else:
             raise NotImplementedError(f"calendar '{self.calendar}' not implemented")
-
-
-# ===== EXAMPLE =====
-dct = DayCount(calendar="anbima", dcc='act/360')
-# dct = DayCount(calendar=None, dcc='bus/252')
-# print(list(dct.holidays))
-# print(dct.adjust("2025-09-13"))
-print(dct.days("2025-09-13", "2025-12-31"))

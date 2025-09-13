@@ -28,9 +28,10 @@ class Bond:
 
     def duration_macaulay(self, t, y):
         # TODO macaulay duration
-        yf = self.dc.year_fraction(t, self.cashflows.index)
-        disc = self.rc.yield_to_disc(y, t, self.cashflows.index)
-        dcf = self.cashflows * disc
+        cf = self.cashflows[self.cashflows.index >= t]
+        yf = self.dc.year_fraction(t, cf.index)
+        disc = self.rc.yield_to_disc(y, t, cf.index)
+        dcf = cf * disc
         return (dcf * yf).sum() / self.yield_to_price(t, y)
 
     def dv01(self, t, y):
@@ -43,16 +44,15 @@ class Bond:
     def yield_to_price(self, t, y):
         # TODO Documentation
         # TODO handle negative dates
-        disc = self.rc.yield_to_disc(y, t, self.cashflows.index)
-        pv = (self.cashflows * disc).sum()
-        return pv
-
+        cf = self.cashflows[self.cashflows.index >= t]
+        disc = self.rc.yield_to_disc(y, t, cf.index)
+        return (cf * disc).sum()
 
 
 # ===== EXAMPLE =====
-cf = pd.Series({pd.to_datetime("2026-12-31"): 1000})
+cft = pd.Series({pd.to_datetime("2026-12-31"): 1000})
 b = Bond(
-    cashflows=cf,
+    cashflows=cft,
     calendar="us_trading",
     dcc="act/365",
     yc='compound',

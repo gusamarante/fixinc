@@ -16,6 +16,8 @@ from pandas.tseries.holiday import (
 NewYear = Holiday("New Year's Day", month=1, day=1, observance=nearest_workday)
 Christmas = Holiday("Christmas Day", month=12, day=25, observance=nearest_workday)
 
+BRCarnavalSeg  = Holiday("Segunda de Carnaval",  month=1, day=1, offset=[Easter(), Day(-48)])
+BRCarnavalTer = Holiday("Terça de Carnaval", month=1, day=1, offset=[Easter(), Day(-47)])
 BRTiradentes = Holiday("Tiradentes", month=4, day=21, start_date="1965-04-20", observance=nearest_workday)
 BRDiaDoTrabalho = Holiday("Dia do Trabalho", month=5, day=1, start_date="1925-04-30", observance=nearest_workday)
 BRCorpusChristi = Holiday("Corpus Christi", month=1, day=1, offset=[Easter(), Day(60)])
@@ -33,7 +35,8 @@ USIndependenceDay = Holiday("Independence Day", month=7, day=4, observance=neare
 class ANBIMA(AbstractHolidayCalendar):
     rules = [
         NewYear,
-        # TODO Carnaval
+        BRCarnavalSeg,
+        BRCarnavalTer,
         GoodFriday,
         BRTiradentes,
         BRDiaDoTrabalho,

@@ -1,10 +1,11 @@
-Bottleneck
-numexpr
-numpy
-pandas
+Bottleneck==1.6.0
+numexpr==2.12.1
+numpy==2.3.3
+pandas==2.3.2
 python-dateutil
 pytz
-setuptools
+setuptools==80.9.0
 six
+tqdm==4.67.1
 tzdata
-wheel
+wheel==0.45.1

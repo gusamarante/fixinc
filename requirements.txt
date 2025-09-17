@@ -3,6 +3,7 @@ matplotlib
 numexpr==2.12.1
 numpy==2.3.3
 pandas==2.3.2
+plottable
 python-dateutil
 pytz
 setuptools==80.9.0

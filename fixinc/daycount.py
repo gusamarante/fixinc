@@ -1,6 +1,8 @@
 from fixinc.holidays import ANBIMA, USTrading
 from pandas import to_datetime, Timestamp, Series
 from numpy import (
+    asarray,
+    broadcast,
     busdaycalendar,
     busday_count,
     busday_offset,
@@ -15,7 +17,12 @@ class DayCount:
         "act/365": 365,
         "act/360": 360,
     }
-    dc_methods = ['act/365', 'act/360', 'bus/252']
+    dc_methods = [  # TODO separate types
+        'act/act isda',
+        'act/365',
+        'act/360',
+        'bus/252',
+    ]
     roll_methods = ['following', 'preceding', 'modifiedfollowing', 'modifiedpreceding']
     weekmask = "Mon Tue Wed Thu Fri"
 
@@ -56,7 +63,7 @@ class DayCount:
             Additional offset (in business days) applied during adjustment
         """
 
-        assert dcc in self.dc_methods, f"day count convention {dcc} not implemented"
+        assert dcc.lower() in self.dc_methods, f"day count convention {dcc} not implemented"
 
         self.calendar = calendar
         self.dcc = dcc.lower()
@@ -108,11 +115,48 @@ class DayCount:
             d2 = self._cast_numpy_date(d2)
             return busday_count(d1, d2, weekmask=self.weekmask, holidays=self.holidays)
 
-        elif self.dcc in ['act/360', 'act/365']:
+        elif self.dcc in ['act/act isda', 'act/360', 'act/365']:
             return self.daysnodc(d1, d2)
 
         else:
             raise NotImplementedError(f"day count convention not implemented in the `days` method")
+
+    def days_in_base(self, d):
+        # TODO Documentation
+
+        # Ensure dates are in the right format and properly rolled if necessary
+        d = self.adjust(d)
+
+        try:
+            return self.dibd[self.dcc]  # TODO Modify in other places
+
+        except KeyError:
+            return self.days_in_year(d)
+
+    def days_in_year(self, d):
+        # TODO Documentation
+
+        # Ensure dates are in the right format and properly rolled if necessary
+        d = self.adjust(d)
+        leap = self.is_leap_year(d)
+
+        if isinstance(d, Timestamp):
+            return 366 * leap + 365 * (not leap)
+        else:
+            return asarray(366 * leap + 365 * ~leap, dtype="int64")
+
+    def is_leap_year(self, d):
+        # TODO Documentation
+
+        # Ensure dates are in the right format and properly rolled if necessary
+        d = self.adjust(d)
+
+        if isinstance(d, Timestamp):
+            year = d.year
+            return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
+        else:
+            year = asarray(d.year)
+            return (year % 4 == 0) & (year % 100 != 0) | (year % 400 == 0)
 
     def daysnodc(self, d1, d2):
         """
@@ -203,13 +247,36 @@ class DayCount:
         d1 = self.adjust(d1)
         d2 = self.adjust(d2)
 
-        # Save adjustment state and set it to none, so we can safely use the
-        # days and dib functions of "date splits" we produce in for some
-        # day counts
-        adj_state = self.adj
-        self.adj = None
-        yf  = self.days(d1, d2) / self.dibd[self.dcc]
-        self.adj = adj_state
+        if self.dcc == "act/act isda":
+            if isinstance(d1, Timestamp) and isinstance(d2, Timestamp):
+                # Handles the "scalar" case
+                assert d1 <= d2, "First date must be smaller or equal to second date"
+
+                if d1.year == d2.year:
+                    yf = self.days(d1, d2) / self.days_in_base(d1)
+
+                else:
+                    ey1 = to_datetime(str(d1.year) + "-12-31")
+                    ey2 = to_datetime(str(d2.year - 1) + "-12-31")
+                    yf = (d2.year - d1.year - 1) + (self.days(d1, ey1) / self.days_in_base(d1)) + (self.days(ey2, d2) / self.days_in_base(d2))
+
+            else:
+                # Vectorized case is just a recursion calling the scalar case
+                result = []
+                f = result.append
+                for t1, t2 in broadcast(d1, d2):
+                    f(self.year_fraction(t1, t2))
+                yf = asarray(result, dtype="float64")
+
+        else:
+            # Save adjustment state and set it to none, so we can safely use the
+            # days and dib functions of "date splits" we produce in for some
+            # day counts
+            adj_state = self.adj
+            self.adj = None
+            yf  = self.days(d1, d2) / self.dibd[self.dcc]
+            self.adj = adj_state
+
         return yf
 
     @staticmethod

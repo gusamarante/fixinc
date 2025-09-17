@@ -1,4 +1,5 @@
 Bottleneck==1.6.0
+matplotlib
 numexpr==2.12.1
 numpy==2.3.3
 pandas==2.3.2

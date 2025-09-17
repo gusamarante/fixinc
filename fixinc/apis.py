@@ -9,6 +9,7 @@ class SGS(object):
 
     def fetch(self, series_id, initial_date=None, end_date=None):
         # TODO Better documentation
+        # TODO improve the scrapper to go only 1 year at a time, since now there is a limit of 10 years.
         """
         Grabs series from the SGS
         :param series_id: series code on the SGS. (int, str, list of int or list of str)

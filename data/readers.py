@@ -74,3 +74,18 @@ def raw_ltn_ntnf():
     ntnf = pd.concat([ntnf, ltn])
 
     return ntnf
+
+
+# ===============
+# ===== LFT =====
+# ===============
+def raw_lft():
+    lft = pd.DataFrame()
+    for year in tqdm(range(2003, last_year + 1), 'Reading LFT files'):
+        aux = pd.read_csv(file_path.joinpath(f'data_lft {year}.csv'), sep=';')
+        lft = pd.concat([lft, aux])
+
+    lft['reference date'] = pd.to_datetime(lft['reference date'])
+    lft['maturity'] = pd.to_datetime(lft['maturity'])
+    lft = lft.drop(['Unnamed: 0', 'index'], axis=1)
+    return lft

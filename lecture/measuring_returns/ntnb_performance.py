@@ -3,7 +3,7 @@ from data.readers import trackers_ntnb
 import matplotlib.pyplot as plt
 from utils import BLUE, figure_path
 from plottable import ColDef, Table
-from plottable.plots import bar
+
 
 size = 5
 
@@ -12,7 +12,7 @@ size = 5
 df = trackers_ntnb()
 df.columns = df.columns.str.replace("NTNB ", "")
 
-cdi = SGS().fetch({12: "CDI"})  # TODO parei aqui, SGS não funciona mais
+cdi = SGS().fetch({12: "CDI"})
 cdi = cdi["CDI"] / 100
 
 rets = 1 + df.pct_change().subtract(cdi, axis=0)

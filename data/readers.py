@@ -104,7 +104,7 @@ def trackers_ustf():
     df.index = pd.to_datetime(df.index)
     df = df[['2y Note', '5y Note', '10y Note', '10y Note Ultra', '30y Bond', '30y Bond Ultra']]
 
-    dur = pd.Series(  # TODO Average Duration
+    dur = pd.Series(  # Average Duration
         data={
             '2y Note': 1.9,
             '5y Note': 4.1,

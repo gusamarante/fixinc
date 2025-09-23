@@ -12,7 +12,7 @@ import pandas as pd
 desired_duration = [0.5, 1, 1.5, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25]  # in years
 rebalance_window = 3  # in months
 notional_start = 100
-start_date = '2006-01-01'
+start_date = '2006-01-01'  # TODO tweek this
 
 ntnb = raw_ntnb()
 

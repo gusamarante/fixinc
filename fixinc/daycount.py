@@ -122,9 +122,9 @@ class DayCount:
             raise NotImplementedError(f"day count convention not implemented in the `days` method")
 
     def days_in_base(self, d):
-		"""
+        """
         Number of days in the base of the day count convention.
-        
+
         Parameters
         ----------
 	    d: str, pandas.Timestamp, pandas.Series, numpy.datetime64, or array-like
@@ -141,7 +141,7 @@ class DayCount:
             return self.days_in_year(d)
 
     def days_in_year(self, d):
-		"""
+        """
         Number of days in the year of the day `d`
         
         Parameters
@@ -160,7 +160,14 @@ class DayCount:
             return asarray(366 * leap + 365 * ~leap, dtype="int64")
 
     def is_leap_year(self, d):
-        # TODO Documentation
+        """
+        Checks if the year of the day `d` is a leap year
+
+        Parameters
+        ----------
+        d: str, pandas.Timestamp, pandas.Series, numpy.datetime64, or array-like
+            Date to query
+        """
 
         # Ensure dates are in the right format and properly rolled if necessary
         d = self.adjust(d)

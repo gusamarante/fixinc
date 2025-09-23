@@ -23,6 +23,11 @@ def raw_di():
     data = data.drop('Unnamed: 0', axis=1)
     return data
 
+def trackers_di1():
+    df = pd.read_csv(data_reader.joinpath("trackers_di1.csv"), index_col=0)
+    df.index = pd.to_datetime(df.index)
+    return df
+
 
 # ================
 # ===== NTNB =====
@@ -41,7 +46,6 @@ def raw_ntnb():
 
 def trackers_ntnb():
     df = pd.read_csv(data_reader.joinpath("trackers_ntnb.csv"), index_col=0)
-    # df = pd.read_csv("trackers_ntnb.csv", index_col=0)
     df.index = pd.to_datetime(df.index)
     return df
 

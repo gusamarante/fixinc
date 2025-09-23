@@ -93,3 +93,25 @@ def raw_lft():
     lft['maturity'] = pd.to_datetime(lft['maturity'])
     lft = lft.drop(['Unnamed: 0', 'index'], axis=1)
     return lft
+
+
+
+# =======================
+# ===== UST Futures =====
+# =======================
+def trackers_ustf():
+    df = pd.read_csv(data_reader.joinpath("UST Futures.csv"), index_col=0)
+    df.index = pd.to_datetime(df.index)
+    df = df[['2y Note', '5y Note', '10y Note', '10y Note Ultra', '30y Bond', '30y Bond Ultra']]
+
+    dur = pd.Series(  # TODO Average Duration
+        data={
+            '2y Note': 1.9,
+            '5y Note': 4.1,
+            '10y Note': 6,
+            '10y Note Ultra': 7.8,
+            '30y Bond': 12,
+            '30y Bond Ultra': 15.3
+        },
+    )
+    return df, dur

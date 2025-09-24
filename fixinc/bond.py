@@ -8,6 +8,7 @@ class Bond:
     #  - LTN, NTNF, NTNB
     #  - US Treasuries
     _1bp = 1 / 10_000  # 1 basis-point
+    epsilon = 1e-10
 
     def __init__(self, cashflows, calendar, dcc, yc):
         """
@@ -100,8 +101,6 @@ class Bond:
         DV01 of the bond, the change in price given a 1 basis-point change in
         the yield
 
-        bond % change ~ duration * (delta_y) + convexity * (delta_y ** 2)
-
         Parameters
         ----------
         t: str, pandas.Timestamp
@@ -110,10 +109,9 @@ class Bond:
         y: float
             Current yield to maturity
         """
-        # TODO increase precision
-        up = self.yield_to_price(t, y + self._1bp)  # Lower price
-        dw = self.yield_to_price(t, y - self._1bp)  # Higher price
-        return 0.5 * (up - dw)
+        pu = self.yield_to_price(t, y)
+        pup = self.yield_to_price(t, y + self.epsilon)
+        return (pup - pu) / (10_000 * self.epsilon)
 
     def yield_to_price(self, t, y):
         """

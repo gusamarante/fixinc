@@ -55,7 +55,7 @@ class Bond:
         up = self.yield_to_price(t, y + self._1bp)
         mid = self.yield_to_price(t, y)
         dw = self.yield_to_price(t, y - self._1bp)
-        return 0.2 * (up + dw - 2 * mid) / mid
+        return 0.5 * (up + dw - 2 * mid) / mid
 
     def duration(self, t, y):
         """

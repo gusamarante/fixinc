@@ -28,6 +28,14 @@ def trackers_di1():
     df.index = pd.to_datetime(df.index)
     return df
 
+def di_curve():
+    df = pd.read_csv(
+        data_reader.joinpath("di_monthly_maturities.csv"),
+        index_col=0,
+    )
+    df.index = pd.to_datetime(df.index)
+    return df
+
 
 # ================
 # ===== NTNB =====

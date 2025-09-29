@@ -108,6 +108,3 @@ plt.tight_layout()
 plt.savefig(figure_path.joinpath("Dimensionality Reduction - DI PCA Explained Variance.pdf"))
 plt.show()
 plt.close()
-
-
-# TODO gráfico da variância explicada

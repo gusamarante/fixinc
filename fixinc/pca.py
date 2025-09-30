@@ -48,4 +48,16 @@ class CurvePCA:
         factors = factors * signal
         return loadings, factors
 
+    def reconstruct(self, factors):
+        """
+        Reconstruct the original data from the factors.
 
+        Parameters
+        ----------
+        factors : array-like, shape (n_samples, n_components)
+            The factor scores to use for reconstruction
+        """
+        return pd.Series(
+            data=np.dot(factors, self.loadings.T) + self.means.values,
+            index=self.loadings.index,
+        )

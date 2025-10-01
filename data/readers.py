@@ -20,6 +20,7 @@ def raw_di():
 
     data['reference_date'] = pd.to_datetime(data['reference_date'])
     data['maturity_date'] = pd.to_datetime(data['maturity_date'])
+    data['du'] = data['du'].astype(int)
     data = data.drop('Unnamed: 0', axis=1)
     return data
 

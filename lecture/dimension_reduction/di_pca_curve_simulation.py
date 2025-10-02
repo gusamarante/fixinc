@@ -21,17 +21,17 @@ curve = curve.resample("M").last()
 
 pca = CurvePCA(curve, n_components=3)
 
+# Estimate outside of class just to print the parameters
 var = VAR(endog=pca.factors)
 res = var.fit(1)
 print(res.summary())
 
 
-# TODO this could go inside the CurvePCA class
+# Simulate the curves
 sim_curves = pd.DataFrame(columns=curve.columns)
 for i in tqdm(range(n_simul)):
-    sim = res.simulate_var(steps=2, initial_values=pca.factors.values[-1:])
-    aux_sim = pca.reconstruct(sim[-1])
-    sim_curves.loc[i] = aux_sim
+    sim = pca.simulate_curve(1).iloc[1]
+    sim_curves.loc[i] = sim
 
 
 # =================================

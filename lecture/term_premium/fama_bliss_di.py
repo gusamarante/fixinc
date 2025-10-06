@@ -18,7 +18,7 @@ curve = curve[curve.index >= '2007-03-16']  # When the continuous 10y starts
 curve = curve.dropna(axis=1)
 curve.columns = curve.columns.str.replace("m", "").astype(int)
 
-curve = curve.resample("YE").last()  # TODO maybe change to ME?
+curve = curve.resample("YE").last()
 columns2keep = [12 * y for y in range(1, 11)]
 curve = curve[columns2keep]
 
@@ -57,7 +57,6 @@ for mat in columns2keep[1:]:
     outreg.loc[mat, "b p-value"] = res.pvalues[1]
 
     outreg.loc[mat, "R2"] = res.rsquared
-
 
 outreg.to_clipboard()
 print(outreg)

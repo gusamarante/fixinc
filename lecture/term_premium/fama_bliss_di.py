@@ -32,9 +32,12 @@ ehpr = hpr.sub(rf.shift(1), axis=0)  # Dependent variables of table 1
 framrf = fra.sub(rf, axis=0).shift(1)  # Independent variables of table 1
 
 
-outreg = pd.DataFrame()
+outreg_ret = pd.DataFrame()
+outreg_rate = pd.DataFrame()
 for mat in columns2keep[1:]:
     X = sm.add_constant(framrf[mat])
+
+    # Predict Returns
     res = sm.OLS(
         endog=ehpr[mat],
         exog=X,
@@ -46,17 +49,43 @@ for mat in columns2keep[1:]:
         kernel="bartlett",
     )
 
-    outreg.loc[mat, "a"] = res.params[0]
-    outreg.loc[mat, "a se"] = res.bse[0]
-    outreg.loc[mat, "a t-stat"] = res.tvalues[0]
-    outreg.loc[mat, "a p-value"] = res.pvalues[0]
+    outreg_ret.loc[mat, "a"] = res.params[0]
+    outreg_ret.loc[mat, "a se"] = res.bse[0]
+    outreg_ret.loc[mat, "a t-stat"] = res.tvalues[0]
+    outreg_ret.loc[mat, "a p-value"] = res.pvalues[0]
 
-    outreg.loc[mat, "b"] = res.params[1]
-    outreg.loc[mat, "b se"] = res.bse[1]
-    outreg.loc[mat, "b t-stat"] = res.tvalues[1]
-    outreg.loc[mat, "b p-value"] = res.pvalues[1]
+    outreg_ret.loc[mat, "b"] = res.params[1]
+    outreg_ret.loc[mat, "b se"] = res.bse[1]
+    outreg_ret.loc[mat, "b t-stat"] = res.tvalues[1]
+    outreg_ret.loc[mat, "b p-value"] = res.pvalues[1]
 
-    outreg.loc[mat, "R2"] = res.rsquared
+    outreg_ret.loc[mat, "R2"] = res.rsquared
 
-outreg.to_clipboard()
-print(outreg)
+
+    # Predict Future Rates
+    res = sm.OLS(
+        endog=curve[mat].shift(int(-(mat/12 - 1))) - curve[12],
+        exog=X,
+        missing='drop',
+    ).fit()
+    res = res.get_robustcov_results(
+        cov_type="HAC",
+        maxlags=2,
+        kernel="bartlett",
+    )
+    outreg_rate.loc[mat, "a"] = res.params[0]
+    outreg_rate.loc[mat, "a se"] = res.bse[0]
+    outreg_rate.loc[mat, "a t-stat"] = res.tvalues[0]
+    outreg_rate.loc[mat, "a p-value"] = res.pvalues[0]
+
+    outreg_rate.loc[mat, "b"] = res.params[1]
+    outreg_rate.loc[mat, "b se"] = res.bse[1]
+    outreg_rate.loc[mat, "b t-stat"] = res.tvalues[1]
+    outreg_rate.loc[mat, "b p-value"] = res.pvalues[1]
+
+    outreg_rate.loc[mat, "R2"] = res.rsquared
+
+
+# outreg_ret.to_clipboard()
+outreg_rate.to_clipboard()
+print(outreg_rate)

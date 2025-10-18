@@ -1,6 +1,7 @@
 import pandas as pd
 from fixinc.daycount import DayCount
 from fixinc.compounder import RateCompounder
+from scipy.interpolate import interp1d
 
 
 class Bond:
@@ -130,3 +131,23 @@ class Bond:
         cf = self.cashflows[self.cashflows.index >= t]
         disc = self.rc.yield_to_disc(y, t, cf.index)
         return (cf * disc).sum()
+
+class ZeroCurve:
+
+    def __init__(self, yields):
+        self.yields = yields
+
+    def forward(self, t1, t2):
+        # TODO Documentation
+        # TODO assert t1 < t2, "Invalid maturities"
+
+        # Linear Interpolation
+        def get_fra(yc):
+            yc = yc.dropna()
+            fun = interp1d(yc.index, yc.values, kind="linear", fill_value="extrapolate")
+            y1, y2 = fun(t1), fun(t2)
+            fra = (((1 + y2) ** t2) / ((1 + y1) ** t1)) ** (1 / (t2 - t1)) - 1
+            return fra
+
+        fras = self.yields.apply(get_fra, axis=1)
+        return fras

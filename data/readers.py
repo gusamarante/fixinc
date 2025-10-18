@@ -124,3 +124,9 @@ def trackers_ustf():
         },
     )
     return df, dur
+
+
+# =====================
+# ===== BCB Focus =====
+# =====================
+# TODO Parei aqui

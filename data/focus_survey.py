@@ -1,5 +1,6 @@
 """
-Creates the series the X-years ahead expectation of the selic.
+Creates the series the X-years ahead expectation of the selic form the BCB
+Focus Survey.
 """
 from fixinc.apis import BCBFocusScraper
 import pandas as pd
@@ -31,4 +32,5 @@ for ya in range(1, years_ahead + 1):
     selic_ahead.append((interpolated["Current"] * w_current_year + interpolated["Next"] * w_next_year).rename(f"{ya}y ahead"))
 
 selic_ahead = pd.concat(selic_ahead, axis=1)
-selic_ahead.to_csv("facebook_selic_years_ahead.csv")
+selic_ahead.index.name = "Date"
+selic_ahead.to_csv("focus_selic_years_ahead.csv")

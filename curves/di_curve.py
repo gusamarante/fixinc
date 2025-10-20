@@ -3,13 +3,13 @@ Generates the DI curve, interpolated at fixed monthly maturies with the
 flat-forward method
 """
 from utils import data_output
-from data.readers import raw_di
+from data.readers import di_raw
 import pandas as pd
 import numpy as np
 
 
 # Read the Data
-data = raw_di()
+data = di_raw()
 
 # ===== Interpolate Flat-Forward =====
 curve = data.pivot(index='reference_date', columns='du', values='rate')

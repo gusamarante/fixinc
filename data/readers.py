@@ -12,7 +12,7 @@ last_year = 2025  # Year of the last file available
 # ======================
 # ===== DI Futures =====
 # ======================
-def raw_di():
+def di_raw():
     data = pd.DataFrame()
     for year in tqdm(range(2006, last_year + 1), 'Reading DI files'):
         aux = pd.read_csv(file_path.joinpath(f'data_di1 {year}.csv'), sep=';')

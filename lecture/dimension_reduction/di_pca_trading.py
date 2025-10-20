@@ -1,5 +1,5 @@
 from utils import figure_path, BLUE, RED, GREEN
-from data.readers import raw_di, di_curve
+from data.readers import di_raw, di_curve
 from scipy.interpolate import interp1d
 from matplotlib.pylab import Slider
 import matplotlib.pyplot as plt
@@ -20,7 +20,7 @@ loadings.index *= 21
 
 
 # DATA - Get the January maturities of the lastest available curve
-di = raw_di()
+di = di_raw()
 cond_latest_date = di["reference_date"] == di["reference_date"].max()
 cond_fmat = di["contract"].str[0] == "F"
 di = di[cond_latest_date & cond_fmat]

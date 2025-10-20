@@ -14,7 +14,9 @@ class SGS(object):
     the Brazilian Central Bank.
     """
 
-    def fetch(self, series_id):
+    def fetch(self, series_id, start_date=None):
+        # TODO add start and end dates to speed things up
+        # TODO fallback with offline data?
         """
         Grabs series from the SGS
 
@@ -23,34 +25,46 @@ class SGS(object):
         series_id: int, str, list of int, list of str or dict
             Series code on the SGS. If a dict is passed, the dict keys are used
             as series codes and the dict values are used as column names.
+
+        start_date: date-like
+            Starting date of the series. If the date is too far back in the
+            past, the scraping will take longer as there is a cap on the SGS.
+            Shorter series return faster.
         """
 
         if type(series_id) is list:  # loop all series codes
             df = pd.DataFrame()
 
             for cod in series_id:
-                single_series = self._fetch_single_code(cod)
+                single_series = self._fetch_single_code(cod, start_date)
                 df = pd.concat([df, single_series], axis=1)
 
         elif type(series_id) is dict:
             df = pd.DataFrame()
 
             for cod in series_id.keys():
-                single_series = self._fetch_single_code(cod)
+                single_series = self._fetch_single_code(cod, start_date)
                 df = pd.concat([df, single_series], axis=1)
 
             df = df.rename(series_id, axis=1)
 
         else:
-            df = self._fetch_single_code(series_id)
+            df = self._fetch_single_code(series_id, start_date)
 
         df = df.sort_index()
         return df
 
-    def _fetch_single_code(self, series_id):
+    def _fetch_single_code(self, series_id, start_date):
         # These variable are going to loop to scrape the data.
         dt_end = TODAY
-        dt_ini = dt_end - relativedelta(years=10)
+
+        if start_date is None:
+            dt_ini = dt_end - relativedelta(years=10)
+        else:
+            dt_ini = max(
+                pd.to_datetime(start_date),
+                dt_end - relativedelta(years=10),
+            )
 
         url = self._build_url(series_id, dt_ini, dt_end)
         df = pd.read_json(url)
@@ -61,15 +75,16 @@ class SGS(object):
             dt_ini = dt_end - relativedelta(years=10)
 
             url = self._build_url(series_id, dt_ini, dt_end)
-            print(url)
             try:
                 aux_df = pd.read_json(url)
             except HTTPError:
                 break
 
             len_df = len(aux_df)
-            print(len_df)
             df = pd.concat([df, aux_df], axis=0)
+
+            if pd.to_datetime(df["data"]).min() <= pd.to_datetime(start_date):
+                break
 
         df['data'] = pd.to_datetime(df['data'], dayfirst=True)
         df = df.set_index('data').sort_index()

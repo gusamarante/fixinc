@@ -1,7 +1,7 @@
 """
 Builds Excess Return Indexes for the Brazilian DI Futures
 """
-from data.readers import raw_di
+from data.readers import di_raw
 from utils import data_output
 from tqdm import tqdm
 import pandas as pd
@@ -13,7 +13,7 @@ start_date = '2008-01-01'  # when the 10y gets enough liquidity
 index_start = 100
 
 # Read the Data
-di = raw_di()
+di = di_raw()
 
 # Set up
 dates2loop = pd.to_datetime(di['reference_date'].unique())

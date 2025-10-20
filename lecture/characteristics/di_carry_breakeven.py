@@ -57,6 +57,34 @@ ax.tick_params(rotation=90, axis="x")
 
 plt.tight_layout()
 
-plt.savefig(figure_path.joinpath("Characteristics - DI Money Carry and Yield Breakeven.pdf"))
+plt.savefig(figure_path.joinpath("Characteristics - DI Money Carry and Yield Breakeven Timeseries.pdf"))
+plt.show()
+plt.close()
+
+
+# --- Academic Carry 5y-1m ---
+carry = ((((1 + curve["60m"]) ** 5) / ((1 + curve["59m"]) ** (59 / 12))) / (1 + cdi) - 1).dropna()
+
+
+# --- Chart ---
+size = 5
+fig = plt.figure(figsize=(size * (16 / 7.3), size))
+
+ax = plt.subplot2grid((1, 1), (0, 0))
+ax.set_title("Academic Carry - 5y/1m")
+ax.plot(carry * 100, color=BLUE)
+# ax.axhline(0, color="black", lw=0.5)
+ax.xaxis.grid(color="grey", linestyle="-", linewidth=0.5, alpha=0.5)
+ax.yaxis.grid(color="grey", linestyle="-", linewidth=0.5, alpha=0.5, which="both")
+ax.set_ylabel("Carry (%)")
+ax.get_yaxis().set_major_formatter(ScalarFormatter())
+locators = mdates.YearLocator()
+ax.xaxis.set_major_locator(locators)
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+ax.tick_params(rotation=90, axis="x")
+
+plt.tight_layout()
+
+plt.savefig(figure_path.joinpath("Characteristics - DI Academic Carry Timeseries.pdf"))
 plt.show()
 plt.close()

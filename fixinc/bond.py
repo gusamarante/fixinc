@@ -1,7 +1,7 @@
 import pandas as pd
 from fixinc.daycount import DayCount
 from fixinc.compounder import RateCompounder
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, make_interp_spline
 
 
 class Bond:
@@ -134,8 +134,22 @@ class Bond:
 
 class ZeroCurve:
 
-    def __init__(self, yields):
+    def __init__(self, yields, yc='compound'):
+        # TODO yields ref_date X years to mat
+        # TODO assert date types
         self.yields = yields
+        self.comp = RateCompounder(yc=yc)
+
+    def interpolator(self, ref_date, method="linear"):
+        # TODO Documentation (returns a function, to gain efficiency)
+        curve = self.yields.loc[ref_date].dropna()
+
+        if method == "linear":
+            fun = make_interp_spline(curve.index, curve.values, k=1)  # TODO check if linear
+        else:
+            raise NotImplementedError(f"Interpolation method {method} not inplemented")
+
+        return fun
 
     def forward(self, t1, t2):
         # TODO Documentation
@@ -146,7 +160,7 @@ class ZeroCurve:
             yc = yc.dropna()
             fun = interp1d(yc.index, yc.values, kind="linear", fill_value="extrapolate")
             y1, y2 = fun(t1), fun(t2)
-            fra = (((1 + y2) ** t2) / ((1 + y1) ** t1)) ** (1 / (t2 - t1)) - 1
+            fra = (((1 + y2) ** t2) / ((1 + y1) ** t1)) ** (1 / (t2 - t1)) - 1  # TODO use the compouder
             return fra
 
         fras = self.yields.apply(get_fra, axis=1)

@@ -1,6 +1,7 @@
 from getpass import getuser
 from pathlib import Path
 
+# TODO update this
 file_path = Path(f"/Users/{getuser()}/Dropbox/Lectures/Fixed Income/Data")
 figure_path = Path(f"/Users/{getuser()}/Dropbox/Lectures/Fixed Income/figures")
 data_output = Path("../data/")

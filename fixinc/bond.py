@@ -140,16 +140,22 @@ class ZeroCurve:
         self.yields = yields
         self.comp = RateCompounder(yc=yc)
 
-    def interpolator(self, ref_date, method="linear"):
-        # TODO Documentation (returns a function, to gain efficiency)
+    def interpolate(self, ref_date, mat, method="linear"):
+        # TODO Documentation
         curve = self.yields.loc[ref_date].dropna()
 
         if method == "linear":
-            fun = make_interp_spline(curve.index, curve.values, k=1)  # TODO check if linear
+            fun = make_interp_spline(curve.index, curve.values, k=1)
+            y_interp = fun(mat)
+        elif method == "flat-forward":
+            # TODO
+            #  get discounts, invert, take logs, interpolate linear, exponential, invert, get rate
+            a = 1
+
         else:
             raise NotImplementedError(f"Interpolation method {method} not inplemented")
 
-        return fun
+        return y_interp
 
     def forward(self, t1, t2):
         # TODO Documentation

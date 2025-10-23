@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 from fixinc.daycount import DayCount
 from fixinc.compounder import RateCompounder

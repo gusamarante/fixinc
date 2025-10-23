@@ -1,6 +1,7 @@
-import matplotlib.pyplot as plt
-from fixinc import ZeroCurve
 from utils import BLUE, RED, GREEN
+import matplotlib.pyplot as plt
+from utils import figure_path
+from fixinc import ZeroCurve
 import pandas as pd
 import numpy as np
 
@@ -28,16 +29,26 @@ zc = ZeroCurve(
 # )
 # print(interp)
 
+mat_range = np.arange(1, 3.01, 0.01)
+fras = pd.DataFrame(
+    {
+        "Linear": [zc.interpolate("2025-01-01", t, method="linear") for t in mat_range],
+        "Flat Forward": [zc.interpolate("2025-01-01", t, method="flat forward") for t in mat_range],
+        "Cubic Spline": [zc.interpolate("2025-01-01", t, method="cubic spline") for t in mat_range],
+    },
+    index=mat_range,
+)
+# TODO, parei aqui, computar os FRAs
 
 # =================
 # ===== CHART =====
 # =================
-mat_range = np.arange(1, 3, 0.01)
 size = 6
+
 fig = plt.figure(figsize=(size * (16 / 7.3), size))
 
 # Curves
-ax = plt.subplot2grid((1, 1), (0, 0))
+ax = plt.subplot2grid((1, 2), (0, 0))
 ax.plot(
     mat_range,
     [zc.interpolate("2025-01-01", t, method="linear") for t in mat_range],
@@ -60,12 +71,20 @@ ax.plot(
     lw=2,
 )
 
-ax.set_title("Zero Curve Interpolation Methods")
+ax.set_title("Interpolated Zero Curve")
 ax.set_ylabel("Yields")
 ax.set_xlabel("Maturity (Years)")
 ax.yaxis.grid(color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
 ax.xaxis.grid(color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
 ax.legend(frameon=True, loc='best')
 
+
+# Forward Curve
+ax = plt.subplot2grid((1, 2), (0, 1))
+
+
+
+
+plt.savefig(figure_path.joinpath("TSIR - Interpolation Methods Example.pdf"))
 plt.tight_layout()
 plt.show()

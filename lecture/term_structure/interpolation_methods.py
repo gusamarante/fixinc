@@ -107,6 +107,6 @@ ax.yaxis.grid(color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
 ax.xaxis.grid(color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
 ax.legend(frameon=True, loc='best')
 
-plt.savefig(figure_path.joinpath("TSIR - Interpolation Methods Example.pdf"))
 plt.tight_layout()
+plt.savefig(figure_path.joinpath("TSIR - Interpolation Methods Example.pdf"))
 plt.show()

@@ -1,7 +1,8 @@
 import pandas as pd
+import numpy as np
 from fixinc.daycount import DayCount
 from fixinc.compounder import RateCompounder
-from scipy.interpolate import interp1d, make_interp_spline
+from scipy.interpolate import interp1d, make_interp_spline, CubicSpline
 
 
 class Bond:
@@ -147,10 +148,15 @@ class ZeroCurve:
         if method == "linear":
             fun = make_interp_spline(curve.index, curve.values, k=1)
             y_interp = fun(mat)
-        elif method == "flat-forward":
-            # TODO
-            #  get discounts, invert, take logs, interpolate linear, exponential, invert, get rate
-            a = 1
+
+        elif method == "flat forward":
+            logfactor = np.log(self.comp.yield_to_factor_yf(curve.values, curve.index))
+            factor_interp = np.exp(make_interp_spline(curve.index, logfactor, k=1)(mat))
+            y_interp = self.comp.factor_to_yield_yf(factor_interp, mat)
+
+        elif method == "cubic spline":
+            fun = CubicSpline(curve.index, curve.values)
+            y_interp = fun(mat)
 
         else:
             raise NotImplementedError(f"Interpolation method {method} not inplemented")
@@ -159,7 +165,6 @@ class ZeroCurve:
 
     def forward(self, t1, t2):
         # TODO Documentation
-        # TODO assert t1 < t2, "Invalid maturities"
 
         # Linear Interpolation
         def get_fra(yc):

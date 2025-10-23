@@ -1,5 +1,5 @@
 from fixinc.daycount import DayCount
-from numpy import exp
+from numpy import exp, log
 
 
 class RateCompounder:
@@ -75,3 +75,60 @@ class RateCompounder:
         float or numpy.ndarray
         """
         return 1 / self.yield_to_factor(y, d1, d2)
+
+    def yield_to_factor_yf(self, y, yf):
+        """
+        Generates the yield factor between dates d1 and d2
+
+        Parameters
+        ----------
+        y: float
+            yield
+
+        yf: float
+            year fraction
+
+        Returns
+        -------
+        float or numpy.ndarray
+        """
+        if self.yc == 'compound':
+            return (1 + y) ** yf
+
+        elif self.yc == 'linear':
+            return 1 + y * yf
+
+        elif self.yc == 'continuous':
+            return exp(y * yf)
+
+        else:
+            raise NotImplementedError(f"Yield convention {self.yc} not implemented")
+
+    def factor_to_yield_yf(self, f, yf):
+        """
+        Generates the yield factor between dates d1 and d2
+
+        Parameters
+        ----------
+        f: float
+            yield factor
+
+        yf: float
+            year fraction
+
+        Returns
+        -------
+        float or numpy.ndarray
+        """
+        if self.yc == 'compound':
+            return f ** (1 / yf) - 1
+
+        elif self.yc == 'linear':
+            return (f - 1) / yf
+
+        elif self.yc == 'continuous':
+            return log(f) / yf
+
+        else:
+            raise NotImplementedError(
+                f"Yield convention {self.yc} not implemented")

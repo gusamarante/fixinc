@@ -43,7 +43,30 @@ def make_cf_plot(mpl_ax, coupon, face_value, years, ytm):
     mpl_ax.legend(frameon=True, loc='upper left')
 
 def make_dv_plot(mpl_ax, coupon, face_value, years, ytm):
-    pass
+    Tplot, CFplot, MacDur = cf(coupon, face_value, years, ytm)
+    price = - CFplot[0]
+
+    ytm_grid = np.arange(0, 0.5, step=0.02)
+    prices2plot = []
+    for y in ytm_grid:
+        Tplot, CFplot, MacDur = cf(coupon, face_value, years, y)
+        p = - CFplot[0]
+        prices2plot.append(p)
+
+    mpl_ax.plot(ytm_grid, prices2plot, label=r"P(y)")
+    mpl_ax.plot([ytm, ytm], [0, price], color=RED, ls="--")
+    mpl_ax.plot([0, ytm], [price, price], color=RED, ls="--")
+
+    # TODO add DV01 approximation
+    # TODO add Convexity Approximation
+
+    mpl_ax.axhline(0, color="black", lw=0.5)
+    mpl_ax.axvline(0, color="black", lw=0.5)
+    mpl_ax.yaxis.grid(color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
+    mpl_ax.xaxis.grid(color='grey', linestyle='-', linewidth=0.5, alpha=0.5)
+    mpl_ax.set_ylabel("Price")
+    mpl_ax.set_xlabel("Yield to Maturity")
+    mpl_ax.legend(frameon=True, loc='upper right')
 
 
 # =================
@@ -54,10 +77,11 @@ fig = plt.figure(figsize=(size * 1.61, size))
 
 # Curves
 ax1 = plt.subplot2grid((8, 4), (0, 0), rowspan=4, colspan=2)
-make_cf_plot(ax1, start_coupon, start_face_value, start_years,start_ytm)
+make_cf_plot(ax1, start_coupon, start_face_value, start_years, start_ytm)
 
 # Price-yield + DV01
-
+ax2 = plt.subplot2grid((8, 4), (0, 2), rowspan=4, colspan=2)
+make_dv_plot(ax2, start_coupon, start_face_value, start_years, start_ytm)
 
 # Sliders
 ax_T = plt.subplot2grid((8, 4), (4, 1), colspan=2)
@@ -94,7 +118,7 @@ ax_ytm = plt.subplot2grid((8, 4), (7, 1), colspan=2)
 slide_ytm = Slider(
     ax=ax_ytm,
     label=r"Yield to Maturity $y$",
-    valmin=-0.1,
+    valmin=0,
     valinit=start_ytm,
     valmax=0.5,
     valstep=0.005,
@@ -109,6 +133,8 @@ def update(val):
     ax1.cla()
     make_cf_plot(ax1, new_coupon, new_fv, new_T, new_ytm)
 
+    ax2.cla()
+    make_dv_plot(ax2, new_coupon, new_fv, new_T, new_ytm)
 
 slide_T.on_changed(update)
 slide_coupon.on_changed(update)

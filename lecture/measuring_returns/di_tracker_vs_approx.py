@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from data.readers import di_curve, trackers_di1
 import numpy as np
-from utils import BLUE, RED
+from utils import BLUE, RED, figure_path
 from fixinc import Performance
 from plottable import ColDef, Table
 
@@ -78,7 +78,7 @@ ax.set_ylabel("Full-Valuation Returns")
 ax.legend(frameon=True, loc="upper left")
 
 plt.tight_layout()
-# TODO save fig
+plt.savefig(figure_path.joinpath("Measuring Returns - DI Duration Approximated Scatter.pdf"))
 plt.show()
 
 
@@ -135,6 +135,5 @@ for col in range(tab.col_label_row.get_xrange()[1]):
     tab.col_label_row.cells[col].text.set_weight("bold")
 
 plt.tight_layout()
-
-# TODO Save fig
+plt.savefig(figure_path.joinpath("Measuring Returns - DI Duration Approximated Performance.pdf"))
 plt.show()

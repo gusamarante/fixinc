@@ -14,7 +14,7 @@ start_face_value = 1000
 start_years = 5
 start_ytm = 0.05
 
-def cf(coupon, face_value, years, ytm):
+def bond_data(coupon, face_value, years, ytm):
     cfs = {
         t + 1: coupon for t in range(years)
     }
@@ -22,16 +22,23 @@ def cf(coupon, face_value, years, ytm):
     cfs = pd.Series(cfs)
 
     disc = (1 + ytm) ** (-cfs.index)
+    p = sum(disc * cfs)
     macdur = (cfs * disc * cfs.index).sum() / (cfs * disc).sum()
+
+
+    disc2 = (1 + ytm + 0.0001) ** (-cfs.index)
+    p2 = sum(disc2 * cfs)
+
+    dv01 = p2 - p
 
     cfs.loc[0] = - (cfs * disc).sum()
     cfs = cfs.sort_index()
 
-    return cfs.index, cfs.values, macdur
+    return cfs.index, cfs.values, macdur, dv01
 
 
 def make_cf_plot(mpl_ax, coupon, face_value, years, ytm):
-    Tplot, CFplot, MacDur = cf(coupon, face_value, years,ytm)
+    Tplot, CFplot, MacDur, dv01 = bond_data(coupon, face_value, years, ytm)
     bars = mpl_ax.bar(Tplot, CFplot, width=0.5, color=BLUE, label="Cashflows")
     mpl_ax.axhline(0, color="black", lw=0.5)
     mpl_ax.bar_label(bars, padding=1)
@@ -43,17 +50,17 @@ def make_cf_plot(mpl_ax, coupon, face_value, years, ytm):
     mpl_ax.legend(frameon=True, loc='upper left')
 
 def make_dv_plot(mpl_ax, coupon, face_value, years, ytm):
-    Tplot, CFplot, MacDur = cf(coupon, face_value, years, ytm)
+    Tplot, CFplot, MacDur, dv01 = bond_data(coupon, face_value, years, ytm)
     price = - CFplot[0]
 
     ytm_grid = np.arange(0, 0.5, step=0.02)
     prices2plot = []
     for y in ytm_grid:
-        Tplot, CFplot, MacDur = cf(coupon, face_value, years, y)
+        _, CFplot, _, _ = bond_data(coupon, face_value, years, y)
         p = - CFplot[0]
         prices2plot.append(p)
 
-    mpl_ax.plot(ytm_grid, prices2plot, label=r"P(y)")
+    mpl_ax.plot(ytm_grid, prices2plot, label=r"P(y)", color=BLUE)
     mpl_ax.plot([ytm, ytm], [0, price], color=RED, ls="--")
     mpl_ax.plot([0, ytm], [price, price], color=RED, ls="--")
 

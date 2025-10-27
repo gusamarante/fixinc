@@ -1,33 +1,35 @@
 import pandas as pd
-
+import matplotlib.pyplot as plt
 from data.readers import di_curve, trackers_di1
 import numpy as np
 
 
 start_date = "2009-01-01"
 
-# True Returns
+# Grab Data
 trackers = trackers_di1()
 trackers.columns = trackers.columns.str.replace("DI ", "").str.replace("y", "").astype(float)
+
+curve = di_curve()
+curve.columns = curve.columns.str.replace("m", "").astype(float) / 12
+
+mats = np.intersect1d(curve.columns, trackers.columns)
+
+trackers = trackers[mats]
+curve = curve[mats]
+
+# True Returns
 rets_true = trackers.pct_change(1)
 rets_true = rets_true[rets_true.index >= start_date]
 
 # Approximated returns
-curve = di_curve()
-curve.columns = curve.columns.str.replace("m", "").astype(float) / 12
 moddur = - curve.columns / (1 + curve)
-rets_approx = curve.diff(1) * moddur
+rets_approx = (curve.diff(1) * moddur).dropna()
 rets_approx = rets_approx[rets_approx.index >= start_date]
 
-# TODO retornos aproximados estão zuados
+# Chart
+# TODO Scatter plot of daily returns (is deceiving)
+plt.plot(rets_approx[10.], rets_true[10.], lw=0, ls=None, marker="o", alpha=0.4)
+plt.show()
 
-mats = np.intersect1d(curve.columns, trackers.columns)
-rets_true, rets_approx = rets_true[mats], rets_approx[mats]
-
-compare_means = pd.DataFrame(
-    {
-        "True": rets_true.mean(),
-        "Approx": rets_approx.mean()
-    }
-)
-print(compare_means)
+# TODO performance table of reconstructed indexes

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.pylab import Slider
 import pandas as pd
 import numpy as np
-from utils import RED, BLUE
+from utils import RED, BLUE, GREEN
 
 
 start_coupon = 120
@@ -64,8 +64,13 @@ def make_dv_plot(mpl_ax, coupon, face_value, years, ytm):
     mpl_ax.plot([ytm, ytm], [0, price], color=RED, ls="--")
     mpl_ax.plot([0, ytm], [price, price], color=RED, ls="--")
 
-    # TODO add DV01 approximation
-    # TODO add Convexity Approximation
+    deltay = 0.07
+    mpl_ax.plot(
+        [ytm - deltay, ytm + deltay],
+        [price - dv01 * deltay * 10000, price + dv01 * deltay * 10000],
+        color=GREEN,
+        label=f"DV01 = {dv01:.2f}",
+    )
 
     mpl_ax.axhline(0, color="black", lw=0.5)
     mpl_ax.axvline(0, color="black", lw=0.5)

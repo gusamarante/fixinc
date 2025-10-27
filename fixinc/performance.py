@@ -36,7 +36,7 @@ class Performance(object):
         elif self.freq == "M":
             self.ret_factor = 12
         else:
-            raise NotImplementedError("frequancy not implemented")
+            raise NotImplementedError("frequency not implemented")
 
         self.total_return = total_return
         self.start_date = total_return.isna().astype(int).diff().idxmin().rename('Start Date')

@@ -4,6 +4,7 @@ from data.readers import di_curve, trackers_di1
 import numpy as np
 from utils import BLUE, RED
 from fixinc import Performance
+from plottable import ColDef, Table
 
 
 start_date = "2009-01-01"
@@ -80,3 +81,60 @@ plt.tight_layout()
 # TODO save fig
 plt.show()
 
+
+# --- Performance ---
+perf_true = Performance(track_true, skip_dd=True).table
+perf_approx = Performance(track_approx, skip_dd=True).table
+
+
+df_perf = pd.DataFrame(
+    {
+        "Return Approx": perf_approx.loc["Return"],
+        "Return True": perf_true.loc["Return"],
+        "Return Delta": perf_true.loc["Return"] - perf_approx.loc["Return"],
+        "Vol Approx": perf_approx.loc["Vol"],
+        "Vol True": perf_true.loc["Vol"],
+        "Vol Delta": perf_true.loc["Vol"] - perf_approx.loc["Vol"],
+        "Sharpe Approx": perf_approx.loc["Sharpe"],
+        "Sharpe True": perf_true.loc["Sharpe"],
+        "Sharpe Delta": perf_true.loc["Sharpe"] - perf_approx.loc["Sharpe"],
+    }
+)
+
+# =============================
+# ===== Performance Table =====
+# =============================
+size = 6
+fig = plt.figure(figsize=(size * (16 / 7.3), size))
+
+ax = plt.subplot2grid((1, 1), (0, 0))
+
+tab = Table(
+    df_perf,
+    ax=ax,
+    footer_divider=True,
+    textprops={"fontsize": 10},
+    column_definitions=[
+        ColDef(name="index", title="Duration", textprops={"ha": "left", "weight": "bold"}),
+
+        ColDef(name="Return Approx", title="Approximated", group="Annual Return", formatter="{:.2%}"),
+        ColDef(name="Return True", title="Full Valuation", group="Annual Return",formatter="{:.2%}"),
+        ColDef(name="Return Delta", title="Delta", group="Annual Return",formatter="{:.2%}"),
+
+        ColDef(name="Vol Approx", title="Approximated", group="Volatility", formatter="{:.2%}"),
+        ColDef(name="Vol True", title="Full Valuation", group="Volatility", formatter="{:.2%}"),
+        ColDef(name="Vol Delta", title="Delta", group="Volatility", formatter="{:.2%}"),
+
+        ColDef(name="Sharpe Approx", title="Approximated", group="Sharpe", formatter="{:.2}"),
+        ColDef(name="Sharpe True", title="Full Valuation", group="Sharpe", formatter="{:.2}"),
+        ColDef(name="Sharpe Delta", title="Delta", group="Sharpe", formatter="{:.2}"),
+    ],
+)
+
+for col in range(tab.col_label_row.get_xrange()[1]):
+    tab.col_label_row.cells[col].text.set_weight("bold")
+
+plt.tight_layout()
+
+# TODO Save fig
+plt.show()

@@ -2,6 +2,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from data.readers import di_curve, trackers_di1
 import numpy as np
+from utils import BLUE, RED
+from fixinc import Performance
 
 
 start_date = "2009-01-01"
@@ -21,15 +23,60 @@ curve = curve[mats]
 # True Returns
 rets_true = trackers.pct_change(1)
 rets_true = rets_true[rets_true.index >= start_date]
+track_true = (1 + rets_true).cumprod()
+track_true = 100 * track_true / track_true.iloc[0]
 
 # Approximated returns
 moddur = - curve.columns / (1 + curve)
-rets_approx = (curve.diff(1) * moddur).dropna()
+rets_approx = curve.diff(1) * moddur
 rets_approx = rets_approx[rets_approx.index >= start_date]
+track_approx = (1 + rets_approx).cumprod()
+track_approx = 100 * track_approx / track_approx.iloc[0]
 
-# Chart
-# TODO Scatter plot of daily returns (is deceiving)
-plt.plot(rets_approx[10.], rets_true[10.], lw=0, ls=None, marker="o", alpha=0.4)
+
+
+# =================
+# ===== Chart =====
+# =================
+x1, y1 = 0.02, 0.02
+x2, y2 = 0.035, 0.035
+width = x2 - x1
+height = y2 - y1
+
+size = 5
+fig = plt.figure(figsize=(size * (16 / 7.3), size))
+
+ax = plt.subplot2grid((1, 2), (0, 0))
+ax.scatter(rets_approx[10.], rets_true[10.], color=BLUE, alpha=0.3, label="Daily Returns")
+ax.axhline(0, color="black", lw=0.5)
+ax.axvline(0, color="black", lw=0.5)
+ax.axline((0, 0), slope=1, color=RED, lw=1, ls="--", label="45-degree line")
+rect = plt.Rectangle((x1, y1), width, height, facecolor=RED, alpha=0.3)
+ax.add_patch(rect)
+ax.xaxis.grid(color="grey", ls="-", lw=0.5, alpha=0.5)
+ax.yaxis.grid(color="grey", ls="-", lw=0.5, alpha=0.5)
+ax.set_title("DI 10y")
+ax.set_xlabel("Duration-approximated returns")
+ax.set_ylabel("Full-Valuation Returns")
+ax.legend(frameon=True, loc="upper left")
+
+
+ax = plt.subplot2grid((1, 2), (0, 1))
+ax.scatter(rets_approx[10.], rets_true[10.], color=BLUE, alpha=0.3, label="Daily Returns")
+ax.axhline(0, color="black", lw=0.5)
+ax.axvline(0, color="black", lw=0.5)
+ax.axline((0, 0), slope=1, color=RED, lw=1, ls="--", label="45-degree line")
+ax.xaxis.grid(color="grey", ls="-", lw=0.5, alpha=0.5)
+ax.yaxis.grid(color="grey", ls="-", lw=0.5, alpha=0.5)
+rect = plt.Rectangle((x1, y1), width, height, facecolor=RED, alpha=0.1)
+ax.add_patch(rect)
+ax.set(xlim=(x1, x2), ylim=(y1, y2))
+ax.set_title("DI 10y (ZOOMED in the red square)")
+ax.set_xlabel("Duration-approximated returns")
+ax.set_ylabel("Full-Valuation Returns")
+ax.legend(frameon=True, loc="upper left")
+
+plt.tight_layout()
+# TODO save fig
 plt.show()
 
-# TODO performance table of reconstructed indexes

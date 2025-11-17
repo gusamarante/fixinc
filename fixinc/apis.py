@@ -60,6 +60,7 @@ class SGS(object):
 
         if start_date is None:
             dt_ini = dt_end - relativedelta(years=10)
+            start_date = dt_ini
         else:
             dt_ini = max(
                 pd.to_datetime(start_date),
@@ -83,7 +84,7 @@ class SGS(object):
             len_df = len(aux_df)
             df = pd.concat([df, aux_df], axis=0)
 
-            if pd.to_datetime(df["data"]).min() <= pd.to_datetime(start_date):
+            if pd.to_datetime(df["data"], dayfirst=True).min() <= pd.to_datetime(start_date):
                 break
 
         df['data'] = pd.to_datetime(df['data'], dayfirst=True)

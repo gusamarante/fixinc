@@ -82,9 +82,9 @@ class CurvePCA:
         factors : array-like, shape (n_samples, n_components)
             The factor scores to use for reconstruction
         """
-        return pd.DataFrame(
+        return pd.Series(
             data=np.dot(factors, self.loadings.T) + self.means.values,
-            columns=self.loadings.index,
+            index=self.loadings.index,
         )
 
     @staticmethod

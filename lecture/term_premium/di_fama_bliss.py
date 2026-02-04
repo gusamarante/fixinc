@@ -4,10 +4,6 @@ replicates the fama-bliss study for DI futures
 import pandas as pd
 
 from data.readers import di_curve
-from fixinc import CurvePCA
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-from utils import figure_path, BLUE, RED
 import numpy as np
 import statsmodels.api as sm
 

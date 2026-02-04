@@ -7,7 +7,7 @@ import pandas as pd
 from utils import file_path, data_reader  # TODO Deal with the right level to call
 
 
-last_year = 2025  # Year of the last file available
+last_year = 2026  # Year of the last file available
 
 # ======================
 # ===== DI Futures =====

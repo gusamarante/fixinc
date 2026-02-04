@@ -109,7 +109,7 @@ def raw_lft():
 # ===== UST Futures =====
 # =======================
 def trackers_ustf():
-    df = pd.read_csv(data_reader.joinpath("UST Futures.csv"), index_col=0)
+    df = pd.read_csv(data_reader.joinpath("UST Futures.csv"), index_col=0, sep=';')
     df.index = pd.to_datetime(df.index)
     df = df[['2y Note', '5y Note', '10y Note', '10y Note Ultra', '30y Bond', '30y Bond Ultra']]
 

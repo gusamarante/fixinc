@@ -1,3 +1,4 @@
+# TODO this routine needs a review
 from utils import figure_path, BLUE, RED, GREEN
 from data.readers import di_raw, di_curve
 from scipy.interpolate import interp1d

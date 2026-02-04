@@ -35,7 +35,7 @@ fig = plt.figure(figsize=(size * (16 / 7.3), size))
 
 ax = plt.subplot2grid((1, 1), (0, 0))
 ax.set_title("Survey-Based Term Premium - Brazilian Focus Survey")
-ax.plot(tp_survey, label=tp_survey.columns, lw=2)
+ax.plot(tp_survey, label=tp_survey.columns)
 ax.axhline(0, color="black", lw=0.5)
 ax.xaxis.grid(color="grey", linestyle="-", linewidth=0.5, alpha=0.5)
 ax.yaxis.grid(color="grey", linestyle="-", linewidth=0.5, alpha=0.5, which="both")

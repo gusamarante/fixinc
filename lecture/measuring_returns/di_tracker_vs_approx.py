@@ -34,6 +34,11 @@ rets_approx = rets_approx[rets_approx.index >= start_date]
 track_approx = (1 + rets_approx).cumprod()
 track_approx = 100 * track_approx / track_approx.iloc[0]
 
+# Same index
+new_idx = rets_approx.index.intersection(rets_true.index)
+rets_approx = rets_approx.reindex(new_idx)
+rets_true = rets_true.reindex(new_idx)
+
 
 
 # =================
@@ -117,9 +122,9 @@ tab = Table(
     column_definitions=[
         ColDef(name="index", title="Duration", textprops={"ha": "left", "weight": "bold"}),
 
-        ColDef(name="Return Approx", title="Approximated", group="Annual Return", formatter="{:.2%}"),
-        ColDef(name="Return True", title="Full Valuation", group="Annual Return",formatter="{:.2%}"),
-        ColDef(name="Return Delta", title="Delta", group="Annual Return",formatter="{:.2%}"),
+        ColDef(name="Return Approx", title="Approximated", group="Annual Excess Return", formatter="{:.2%}"),
+        ColDef(name="Return True", title="Full Valuation", group="Annual Excess Return",formatter="{:.2%}"),
+        ColDef(name="Return Delta", title="Delta", group="Annual Excess Return",formatter="{:.2%}"),
 
         ColDef(name="Vol Approx", title="Approximated", group="Volatility", formatter="{:.2%}"),
         ColDef(name="Vol True", title="Full Valuation", group="Volatility", formatter="{:.2%}"),

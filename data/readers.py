@@ -50,6 +50,7 @@ def ddi_raw():
     data['reference_date'] = pd.to_datetime(data['reference_date'])
     data['maturity_date'] = pd.to_datetime(data['maturity_date'])
     data['du'] = data['du'].astype(int)
+    data["dc"] = (data["maturity_date"] - data["reference_date"]).dt.days
     data = data.drop('Unnamed: 0', axis=1)
     return data
 

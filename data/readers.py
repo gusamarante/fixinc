@@ -54,6 +54,20 @@ def ddi_raw():
     data = data.drop('Unnamed: 0', axis=1)
     return data
 
+def trackers_ddi():
+    df = pd.read_csv(data_reader.joinpath("trackers_ddi.csv"), index_col=0)
+    df.index = pd.to_datetime(df.index)
+    return df
+
+
+# ========================
+# ===== FRA de Cupom =====
+# ========================
+def trackers_frc():
+    df = pd.read_csv(data_reader.joinpath("trackers_frc.csv"), index_col=0)
+    df.index = pd.to_datetime(df.index)
+    return df
+
 
 # ================
 # ===== NTNB =====

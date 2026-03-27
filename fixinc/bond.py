@@ -173,8 +173,18 @@ class Bond:
         return (cf * disc).sum()
 
 class NTNB(Bond):
-    pass
 
+    def __init__(self, maturity):
+        # Documentation
+        # TODO Generate the cashflows based on maturity
+        # TODO How to deal with the price?
+
+        super().__init__(
+            cashflows=pd.Series(1),  # TODO change this
+            calendar='anbima',
+            dcc='bus/252',
+            yc='compound',
+        )
 
 class ZeroCurve:
 

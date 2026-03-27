@@ -83,6 +83,10 @@ def raw_ntnb():
     ntnb = ntnb.drop(['Unnamed: 0', 'index'], axis=1)
     return ntnb
 
+def vna_ntnb():
+    df = raw_ntnb()
+    df = df.pivot_table(index="reference date", values='vna', aggfunc='mean')['vna'].rename("VNA NTNB")
+    return df
 
 def trackers_ntnb():
     df = pd.read_csv(data_reader.joinpath("trackers_ntnb.csv"), index_col=0)

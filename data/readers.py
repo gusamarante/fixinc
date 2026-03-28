@@ -4,7 +4,7 @@ All the functions in this file only work on my computer. These are outside the
 """
 from tqdm import tqdm
 import pandas as pd
-from utils import file_path, data_reader  # TODO Deal with the right level to call
+from utils import file_path, data_reader, dropbox_path  # TODO Deal with the right level to call
 
 
 last_year = 2026  # Year of the last file available
@@ -164,6 +164,29 @@ def selic_years_ahead():
     data = pd.read_csv(
         data_reader.joinpath(f'focus_selic_years_ahead.csv'),
         index_col="Date",
+    )
+    data.index = pd.to_datetime(data.index)
+    return data
+
+
+# ===============
+# ===== CDS =====
+# ===============
+def cds_sov():
+    data = pd.read_csv(
+        dropbox_path.joinpath(f'data_cds.csv'),
+        sep=";",
+        index_col="date",
+    )
+    data.index = pd.to_datetime(data.index)
+    data.columns = data.columns.str.replace("CDS ", "")
+    return data
+
+def cds_idx():
+    data = pd.read_csv(
+        dropbox_path.joinpath(f'data_cds_index.csv'),
+        sep=";",
+        index_col=0,
     )
     data.index = pd.to_datetime(data.index)
     return data

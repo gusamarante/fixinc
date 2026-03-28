@@ -177,16 +177,58 @@ class NTNB:
     def __init__(self):
         # TODO Documentation
 
-        self.dc = DayCount(calendar="anbima", dcc="bus/252")
+        self.dc = DayCount(calendar="anbima", dcc="bus/252", adj='following')
         self.vna = vna_ntnb()
 
+    @staticmethod
+    def maturity_date(mat):
+        year = int(mat)
+        if year % 2 == 0:
+            return pd.Timestamp(year, 8, 15)
+        else:
+            return pd.Timestamp(year, 5, 15)
+
+    @staticmethod
+    def coupon_dates(mat):
+        year = int(mat)
+        mat_date = NTNB.maturity_date(mat)
+        if year % 2 == 0:
+            months = [2, 8]
+        else:
+            months = [5, 11]
+        dates = []
+        # go back far enough to cover any issued NTNB
+        for y in range(2000, year + 1):
+            for m in months:
+                dt = pd.Timestamp(y, m, 15)
+                if dt <= mat_date:
+                    dates.append(dt)
+        return pd.DatetimeIndex(dates)
+
     def get_cashflows(self, t, mat):
-        # TODO documentation
+        """
+        Generates the future cashflow series of an NTN-B bond.
+
+        Parameters
+        ----------
+        t: str, pandas.Timestamp
+            Current date, used to fetch the VNA and filter future cashflows
+
+        mat: str, int
+            Maturity year of the bond (e.g. "2028" or 2035). Even years
+            mature on August 15th, odd years on May 15th.
+        """
         fv = self.vna.loc[t]
-
-
-
-
+        dates = self.coupon_dates(mat)
+        dates = dates[dates >= t]
+        dates = self.dc.adjust(dates)
+        assert len(dates) > 0, f"No future coupon dates for maturity {mat} as of {t}"
+        coupon = fv * (1.06**0.5 - 1)
+        cfs = pd.Series(index=dates, data=coupon)
+        cfs.iloc[-1] = cfs.iloc[-1] + fv
+        return cfs
 
 if __name__ == "__main__":
     ntnb = NTNB()
+    cf = ntnb.get_cashflows("2026-03-25", "2035")
+    print(cf)

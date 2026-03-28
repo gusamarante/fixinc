@@ -9,15 +9,14 @@ class Bond:
     _1bp = 1 / 10_000  # 1 basis-point
     epsilon = 1e-10
 
-    def __init__(self, cashflows, calendar, dcc, yc):
+    def __init__(self, calendar, dcc, yc, adj=None):
         """
-        Generic bond class for fixed income operations
+        Generic bond class for fixed income operations. Serves as a base
+        class that provides pricing and risk methods. Subclasses should
+        implement get_cashflows to generate bond-specific cashflow series.
 
         Parameters
         ----------
-        cashflows: pandas.Series
-            Cashflows and their respective dates
-
         calendar: str
             Holiday calendar to be used by the DayCount class. Supported values
             are the same as the DayCount class
@@ -27,14 +26,31 @@ class Bond:
             values are the same as the DayCount class
 
         yc: str
-            Yield convetion to be used by the RateCompounder class. Supported
+            Yield convention to be used by the RateCompounder class. Supported
             values are the same as the RateCompounder class.
-        """
-        self.cashflows = cashflows
-        self.dc = DayCount(calendar=calendar, dcc=dcc)
-        self.rc = RateCompounder(yc=yc)
 
-    def convexity(self, t, y):
+        adj: str, optional
+            Business day adjustment rule for the DayCount class
+        """
+        self.dc = DayCount(calendar=calendar, dcc=dcc, adj=adj)
+        self.rc = RateCompounder(yc=yc, dc=self.dc)
+
+    def get_cashflows(self, t, mat):
+        """
+        Returns the bond’s cashflow series. Subclasses must implement this
+        method.
+
+        Parameters
+        ----------
+        t: str, pandas.Timestamp
+            Current date
+
+        mat: str, int
+            Maturity identifier of the bond
+        """
+        raise NotImplementedError
+
+    def convexity(self, t, y, mat):
         """
         Convexity coefficient, the coefficient of the second term in the taylor
         expansion for the percent change in the bond price, given a change in
@@ -49,13 +65,16 @@ class Bond:
 
         y: float
             Current yield to maturity
+
+        mat: str, int
+            Maturity identifier of the bond
         """
-        up = self.yield_to_price(t, y + self._1bp)
-        mid = self.yield_to_price(t, y)
-        dw = self.yield_to_price(t, y - self._1bp)
+        up = self.yield_to_price(t, y + self._1bp, mat)
+        mid = self.yield_to_price(t, y, mat)
+        dw = self.yield_to_price(t, y - self._1bp, mat)
         return 0.5 * (up + dw - 2 * mid) / mid
 
-    def duration(self, t, y):
+    def duration(self, t, y, mat):
         """
         Modified Duration coefficient, the coefficient of the first term in the
         taylor expansion for the percent change in the bond price, given a
@@ -70,10 +89,13 @@ class Bond:
 
         y: float
             Current yield to maturity
-        """
-        return self.dv01(t, y) / self.yield_to_price(t, y)
 
-    def duration_macaulay(self, t, y):
+        mat: str, int
+            Maturity identifier of the bond
+        """
+        return self.dv01(t, y, mat) / self.yield_to_price(t, y, mat)
+
+    def duration_macaulay(self, t, y, mat):
         """
         Macaulay duration, the weighted average time (in years) until a bond’s
         cash flows are received. Can be intepreted as what is the time until
@@ -87,14 +109,17 @@ class Bond:
 
         y: float
             Current yield to maturity
+
+        mat: str, int
+            Maturity identifier of the bond
         """
-        cf = self.cashflows[self.cashflows.index >= t]
+        cf = self.get_cashflows(t, mat)
         yf = self.dc.year_fraction(t, cf.index)
         disc = self.rc.yield_to_disc(y, t, cf.index)
         dcf = cf * disc
-        return (dcf * yf).sum() / self.yield_to_price(t, y)
+        return (dcf * yf).sum() / self.yield_to_price(t, y, mat)
 
-    def dv01(self, t, y):
+    def dv01(self, t, y, mat):
         """
         DV01 of the bond, the change in price given a 1 basis-point change in
         the yield
@@ -106,12 +131,15 @@ class Bond:
 
         y: float
             Current yield to maturity
+
+        mat: str, int
+            Maturity identifier of the bond
         """
-        pu = self.yield_to_price(t, y)
-        pup = self.yield_to_price(t, y + self.epsilon)
+        pu = self.yield_to_price(t, y, mat)
+        pup = self.yield_to_price(t, y + self.epsilon, mat)
         return (pup - pu) / (10_000 * self.epsilon)
 
-    def price_to_yield(self, t, price, y0=0.05, tol=1e-6, max_iter=200):
+    def price_to_yield(self, t, price, mat, y0=0.05, tol=1e-6, max_iter=200):
         """
         Solves for the yield to maturity given the bond price, by inverting
         yield_to_price numerically.
@@ -124,6 +152,9 @@ class Bond:
         price: float
             Observed market price (same units as yield_to_price returns)
 
+        mat: str, int
+            Maturity identifier of the bond
+
         y0: float
             Initial yield guess, default 0.05
 
@@ -135,22 +166,22 @@ class Bond:
         """
         y = y0
         for _ in range(max_iter):
-            p = self.yield_to_price(t, y)
-            dp_dy = self.dv01(t, y) * 10_000
+            p = self.yield_to_price(t, y, mat)
+            dp_dy = self.dv01(t, y, mat) * 10_000
             y_new = y - (p - price) / dp_dy
-            if abs(self.yield_to_price(t, y_new) - price) < tol:
+            if abs(self.yield_to_price(t, y_new, mat) - price) < tol:
                 return y_new
             y = y_new
 
         # Fallback to bracketed solver
         try:
-            return brentq(lambda y_: self.yield_to_price(t, y_) - price, y0 - 0.5, y0 + 0.5, xtol=tol)
+            return brentq(lambda y_: self.yield_to_price(t, y_, mat) - price, y0 - 0.5, y0 + 0.5, xtol=tol)
         except ValueError:
             raise RuntimeError(
                 f"price_to_yield did not converge for price={price} starting from y0={y0}"
             )
 
-    def yield_to_price(self, t, y):
+    def yield_to_price(self, t, y, mat):
         """
         Computes the price of bond, as the present value of its future
         cashflows, given the yield to maturity
@@ -162,13 +193,15 @@ class Bond:
 
         y: float
             Current yield to maturity
+
+        mat: str, int
+            Maturity identifier of the bond
         """
-        # TODO handle negative dates
-        cf = self.cashflows[self.cashflows.index >= t]
+        cf = self.get_cashflows(t, mat)
         disc = self.rc.yield_to_disc(y, t, cf.index)
         return (cf * disc).sum()
 
-class NTNB:
+class NTNB(Bond):
 
     def __init__(self):
         """
@@ -176,7 +209,7 @@ class NTNB:
         inflation-linked fixed income operations. Uses ANBIMA business day
         calendar with bus/252 day count convention.
         """
-        self.dc = DayCount(calendar="anbima", dcc="bus/252", adj='following')
+        super().__init__(calendar="anbima", dcc="bus/252", yc="compound", adj="following")
         self.vna = vna_ntnb()
 
     @staticmethod
@@ -242,7 +275,7 @@ class NTNB:
         return cfs
 
 
-class NTNF:
+class NTNF(Bond):
 
     fv = 1000
 
@@ -252,7 +285,7 @@ class NTNF:
         nominal fixed-rate fixed income operations. Uses ANBIMA business day
         calendar with bus/252 day count convention.
         """
-        self.dc = DayCount(calendar="anbima", dcc="bus/252", adj='following')
+        super().__init__(calendar="anbima", dcc="bus/252", yc="compound", adj="following")
 
     @staticmethod
     def maturity_date(mat):
@@ -310,7 +343,7 @@ class NTNF:
         return cfs
 
 
-class LTN:
+class LTN(Bond):
 
     fv = 1000
 
@@ -320,7 +353,7 @@ class LTN:
         zero-coupon fixed income operations. Uses ANBIMA business day
         calendar with bus/252 day count convention.
         """
-        self.dc = DayCount(calendar="anbima", dcc="bus/252", adj='following')
+        super().__init__(calendar="anbima", dcc="bus/252", yc="compound", adj="following")
 
     @staticmethod
     def maturity_date(mat):
@@ -361,3 +394,20 @@ class LTN:
         mat_date = self.dc.adjust(mat_date)
         assert mat_date >= pd.Timestamp(t), f"Maturity {mat} is in the past as of {t}"
         return pd.Series(index=[mat_date], data=self.fv)
+
+
+if __name__ == "__main__":
+    ntnb = NTNB()
+    t = "2026-03-25"
+    mat = "2035"
+    y = 0.065
+
+    print("Cashflows:")
+    print(ntnb.get_cashflows(t, mat=mat))
+
+    print(f"Price:             {ntnb.yield_to_price(t, y, mat):.6f}")
+    print(f"DV01:              {ntnb.dv01(t, y, mat):.6f}")
+    print(f"Modified Duration: {ntnb.duration(t, y, mat):.6f}")
+    print(f"Macaulay Duration: {ntnb.duration_macaulay(t, y, mat):.6f}")
+    print(f"Convexity:         {ntnb.convexity(t, y, mat):.6f}")
+    print(f"Price to Yield:    {ntnb.price_to_yield(t, ntnb.yield_to_price(t, y, mat), mat):.6f}")

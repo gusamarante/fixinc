@@ -245,7 +245,71 @@ class NTNB:
         cfs.iloc[-1] = cfs.iloc[-1] + fv
         return cfs
 
-if __name__ == "__main__":
-    ntnb = NTNB()
-    cf = ntnb.get_cashflows("2026-03-25", "2035")
-    print(cf)
+
+class NTNF:
+
+    fv = 1000
+
+    def __init__(self):
+        """
+        NTN-F (Nota do Tesouro Nacional - Série F) bond class for Brazilian
+        nominal fixed-rate fixed income operations. Uses ANBIMA business day
+        calendar with bus/252 day count convention.
+        """
+        self.dc = DayCount(calendar="anbima", dcc="bus/252", adj='following')
+
+    @staticmethod
+    def maturity_date(mat):
+        """
+        Returns the maturity date of an NTN-F bond given its maturity year.
+        NTN-F bonds always mature on January 1st.
+
+        Parameters
+        ----------
+        mat: str, int
+            Maturity year of the bond (e.g. "2029" or 2035)
+        """
+        return pd.Timestamp(int(mat), 1, 1)
+
+    @staticmethod
+    def coupon_dates(mat):
+        """
+        Generates all semiannual coupon payment dates for an NTN-F bond,
+        from the year 2000 up to and including the maturity date. Coupons
+        are paid on January 1st and July 1st.
+
+        Parameters
+        ----------
+        mat: str, int
+            Maturity year of the bond (e.g. "2029" or 2035)
+        """
+        mat_date = NTNF.maturity_date(mat)
+        return pd.date_range(
+            start=pd.Timestamp(2000, 1, 1),
+            end=mat_date,
+            freq=pd.DateOffset(months=6),
+        )
+
+    def get_cashflows(self, t, mat):
+        """
+        Generates the future cashflow series of an NTN-F bond, including
+        semiannual coupon payments and principal repayment at maturity.
+        The coupon is computed as 1000 * (1.10^0.5 - 1).
+
+        Parameters
+        ----------
+        t: str, pandas.Timestamp
+            Current date, used to filter future cashflows
+
+        mat: str, int
+            Maturity year of the bond (e.g. "2029" or 2035)
+        """
+        dates = self.coupon_dates(mat)
+        dates = dates[dates >= t]
+        dates = self.dc.adjust(dates)
+        assert len(dates) > 0, f"No future coupon dates for maturity {mat} as of {t}"
+        coupon = round(self.fv * (1.10 ** 0.5 - 1), 2)
+        cfs = pd.Series(index=dates, data=coupon)
+        cfs.iloc[-1] = cfs.iloc[-1] + self.fv
+        return cfs
+

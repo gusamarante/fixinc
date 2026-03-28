@@ -175,13 +175,25 @@ class Bond:
 class NTNB:
 
     def __init__(self):
-        # TODO Documentation
-
+        """
+        NTN-B (Nota do Tesouro Nacional - Série B) bond class for Brazilian
+        inflation-linked fixed income operations. Uses ANBIMA business day
+        calendar with bus/252 day count convention.
+        """
         self.dc = DayCount(calendar="anbima", dcc="bus/252", adj='following')
         self.vna = vna_ntnb()
 
     @staticmethod
     def maturity_date(mat):
+        """
+        Returns the maturity date of an NTN-B bond given its maturity year.
+        Even years mature on August 15th, odd years on May 15th.
+
+        Parameters
+        ----------
+        mat: str, int
+            Maturity year of the bond (e.g. "2028" or 2035)
+        """
         year = int(mat)
         if year % 2 == 0:
             return pd.Timestamp(year, 8, 15)
@@ -190,20 +202,25 @@ class NTNB:
 
     @staticmethod
     def coupon_dates(mat):
+        """
+        Generates all semiannual coupon payment dates for an NTN-B bond,
+        from the year 2000 up to and including the maturity date. Even year
+        bonds pay on February 15th and August 15th, odd year bonds pay on
+        May 15th and November 15th.
+
+        Parameters
+        ----------
+        mat: str, int
+            Maturity year of the bond (e.g. "2028" or 2035)
+        """
         year = int(mat)
         mat_date = NTNB.maturity_date(mat)
-        if year % 2 == 0:
-            months = [2, 8]
-        else:
-            months = [5, 11]
-        dates = []
-        # go back far enough to cover any issued NTNB
-        for y in range(2000, year + 1):
-            for m in months:
-                dt = pd.Timestamp(y, m, 15)
-                if dt <= mat_date:
-                    dates.append(dt)
-        return pd.DatetimeIndex(dates)
+        first_month = 2 if year % 2 == 0 else 5
+        return pd.date_range(
+            start=pd.Timestamp(2000, first_month, 15),
+            end=mat_date,
+            freq=pd.DateOffset(months=6),
+        )
 
     def get_cashflows(self, t, mat):
         """

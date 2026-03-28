@@ -6,9 +6,6 @@ import pandas as pd
 
 
 class Bond:
-    # TODO Implement:
-    #  - LTN, NTNF, NTNB
-    #  - US Treasuries
     _1bp = 1 / 10_000  # 1 basis-point
     epsilon = 1e-10
 
@@ -53,7 +50,6 @@ class Bond:
         y: float
             Current yield to maturity
         """
-        # TODO Definition duration * dy + convexity * (dy**2)
         up = self.yield_to_price(t, y + self._1bp)
         mid = self.yield_to_price(t, y)
         dw = self.yield_to_price(t, y - self._1bp)

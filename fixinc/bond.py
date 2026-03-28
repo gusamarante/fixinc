@@ -1,6 +1,8 @@
 from fixinc.daycount import DayCount
 from fixinc.compounder import RateCompounder
 from scipy.optimize import brentq
+from data.readers import vna_ntnb
+import pandas as pd
 
 
 class Bond:
@@ -170,47 +172,21 @@ class Bond:
         disc = self.rc.yield_to_disc(y, t, cf.index)
         return (cf * disc).sum()
 
-class NTNB(Bond):
+class NTNB:
 
-    def __init__(self, maturity):
+    def __init__(self):
         # TODO Documentation
-        # TODO Get the VNA somewhere
-        # TODO Generate the cashflows based on maturity
-        # TODO How to deal with the price?
 
-        super().__init__(
-            cashflows=pd.Series(1),  # TODO change this
-            calendar='anbima',
-            dcc='bus/252',
-            yc='compound',
-        )
+        self.dc = DayCount(calendar="anbima", dcc="bus/252")
+        self.vna = vna_ntnb()
+
+    def get_cashflows(self, t, mat):
+        # TODO documentation
+        fv = self.vna.loc[t]
+
+
+
 
 
 if __name__ == "__main__":
-    import pandas as pd
-
-    # Build a simple coupon bond:
-    #   - 3 semi-annual coupons of 3.0 + principal of 100.0 at maturity
-    #   - Brazilian ANBIMA calendar, act/act isda day count, compound yield
-    settlement = pd.Timestamp('2024-01-02')
-    cashflows = pd.Series(
-        [3.0, 3.0, 103.0],
-        index=[
-            pd.Timestamp('2024-07-15'),
-            pd.Timestamp('2025-01-15'),
-            pd.Timestamp('2025-07-15'),
-        ]
-    )
-    bond = Bond(cashflows, calendar='anbima', dcc='bus/252', yc='compound')
-
-    y = 0.06
-    price = bond.yield_to_price(settlement, y)
-    print(f"Price at y={y:.2%}: {price:.6f}")
-    print(f"Modified duration:  {bond.duration(settlement, y):.6f}")
-    print(f"Macaulay duration:  {bond.duration_macaulay(settlement, y):.6f}")
-    print(f"DV01:               {bond.dv01(settlement, y):.6f}")
-    print(f"Convexity:          {bond.convexity(settlement, y):.6f}")
-
-    # Round-trip: recover yield from price
-    y_recovered = bond.price_to_yield(settlement, price)
-    print(f"\nRound-trip yield:   {y_recovered:.10f}  (error: {abs(y_recovered - y):.2e})")
+    ntnb = NTNB()

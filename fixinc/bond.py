@@ -313,3 +313,55 @@ class NTNF:
         cfs.iloc[-1] = cfs.iloc[-1] + self.fv
         return cfs
 
+
+class LTN:
+
+    fv = 1000
+
+    def __init__(self):
+        """
+        LTN (Letra do Tesouro Nacional) bond class for Brazilian nominal
+        zero-coupon fixed income operations. Uses ANBIMA business day
+        calendar with bus/252 day count convention.
+        """
+        self.dc = DayCount(calendar="anbima", dcc="bus/252", adj='following')
+
+    @staticmethod
+    def maturity_date(mat):
+        """
+        Returns the maturity date of an LTN bond. Accepts multiple input
+        formats: "Jan/2028", "2028-01", or "2028-01-01". Validates that the
+        date falls on the 1st of January, April, July, or October.
+
+        Parameters
+        ----------
+        mat: str
+            Maturity date in any of the supported formats
+        """
+        valid_months = {1, 4, 7, 10}
+        dt = pd.Timestamp(mat)
+        assert dt.day == 1, f"LTN maturity must be on the 1st, got day {dt.day}"
+        assert dt.month in valid_months, (
+            f"LTN maturity must be in Jan, Apr, Jul, or Oct, got month {dt.month}"
+        )
+        return dt
+
+    def get_cashflows(self, t, mat):
+        """
+        Generates the future cashflow series of an LTN bond. Since LTN is
+        a zero-coupon bond, returns a single cashflow of R$1,000 at the
+        adjusted maturity date.
+
+        Parameters
+        ----------
+        t: str, pandas.Timestamp
+            Current date, used to validate that maturity is in the future
+
+        mat: str
+            Maturity date in any of the supported formats (e.g. "Jan/2028",
+            "2028-01", "2028-01-01")
+        """
+        mat_date = self.maturity_date(mat)
+        mat_date = self.dc.adjust(mat_date)
+        assert mat_date >= pd.Timestamp(t), f"Maturity {mat} is in the past as of {t}"
+        return pd.Series(index=[mat_date], data=self.fv)

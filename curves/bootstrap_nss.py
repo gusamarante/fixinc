@@ -4,47 +4,33 @@ from fixinc.bond import NTNB
 from fixinc.nss import BootstrapNSS, nss
 from data.readers import raw_ntnb
 from fixinc.daycount import DayCount
-from utils import BLUE
+from utils import file_path
+from tqdm import tqdm
 
 
-# Read data and generate instances
 df = raw_ntnb()
 ntnb = NTNB()
 dc = DayCount(calendar="anbima", dcc="bus/252", adj="following")
 
-# Manipulate data
-dt = df["reference date"].max()
-df = df[df["reference date"] == dt].sort_values("du")
+dates2loop = pd.DatetimeIndex(df["reference date"].unique()).sort_values()
+dates2loop = dates2loop[dates2loop >= "2004-01-01"]
+bm1 = (0.2, 0.2, 0.2, 0.2)
+lm1 = (1, 1)
 
-all_cashflows = []
-prices = pd.Series()
-duration = pd.Series()
-for mat in df["maturity"].to_list():
-    aux_cf = ntnb.get_cashflows(dt, mat.year)
-    all_cashflows.append(aux_cf.rename(mat.year))
-    prices.loc[mat.year] = df[df["maturity"] == mat]["price"].iloc[-1]
-    duration.loc[mat.year] = df[df["maturity"] == mat]["modified duration"].iloc[-1]
+for t in tqdm(dates2loop):
+    aux_raw = df[df["reference date"] == t].sort_values("du")
+    all_cashflows = []
+    prices = pd.Series()
+    duration = pd.Series()
+    for mat in aux_raw["maturity"].to_list():
+        aux_cf = ntnb.get_cashflows(t, mat.year)
+        all_cashflows.append(aux_cf.rename(mat.year))
+        prices.loc[mat.year] = aux_raw[aux_raw["maturity"] == mat]["price"].iloc[-1]
+        duration.loc[mat.year] = aux_raw[aux_raw["maturity"] == mat]["modified duration"].iloc[-1]
 
-all_cashflows = pd.concat(all_cashflows, axis=1).fillna(0)
+    all_cashflows = pd.concat(all_cashflows, axis=1).fillna(0)
+    bnss = BootstrapNSS(prices, all_cashflows, 1/duration, t, dc, beta0=bm1, lam0=lm1, verbose=False)
 
-bnss = BootstrapNSS(prices, all_cashflows, 1/duration, dt, dc, verbose=True)
-print(bnss.beta, bnss.lam, bnss.sse)
-du = dc.days(dt, all_cashflows.index)
-yc = pd.Series(
-    data=nss(
-        t=dc.year_fraction(dt, all_cashflows.index),
-        beta=bnss.beta,
-        lam=bnss.lam,
-    ),
-    index=du,
-)
-
-fig, ax = plt.subplots()
-ax.plot(yc.index, yc.values, color=BLUE)
-ax.set_title(f"NSS Yield Curve — {dt.date()}")
-ax.set_xlabel("Maturity (Years)")
-ax.set_ylabel("Zero Yield")
-ax.yaxis.grid(color="grey", linestyle="-", linewidth=0.5, alpha=0.5)
-ax.xaxis.grid(color="grey", linestyle="-", linewidth=0.5, alpha=0.5)
-plt.tight_layout()
-plt.show()
+    print(t, bnss.beta, bnss.lam, bnss.sse)
+    bm1 = bnss.beta
+    lm1 = bnss.lam

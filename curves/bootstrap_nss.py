@@ -5,35 +5,44 @@ from fixinc.bond import NTNB
 from data.readers import raw_ntnb
 from fixinc.daycount import DayCount
 
-# Custom Functions
-def get_nss(prices, cashflows, weights, ref_date, beta, lam, dc):
-    T = dc.year_fraction(ref_date, cashflows.index)
-    yc = pd.Series(data=nss(T, beta, lam), index=cashflows.index)
-    discf = (1 + yc) ** (-T)
-    prices_dcf = cashflows.multiply(discf, axis=0).sum()
-    sse = (((prices - prices_dcf) ** 2) * weights).sum()
-    return sse
+class BootstrapNSS:
 
+    def __init__(self, prices, cashflows, weights, ref_date, dc, beta0=(0.2, 0.2, 0.2, 0.2), lam0=(0.5, 0.5), verbose=False):
+        self.step = 0
+        self.prices = prices
+        self.cashflows = cashflows
+        self.weights = weights
+        self.ref_date = ref_date
+        self.dc = dc
+        self.verbose = verbose
 
-def fit_beta(prices, cashflows, weights, ref_date, lam, dc, beta0=(0.2, 0.2, 0.2, 0.2)):
-    objective = lambda beta: get_nss(prices, cashflows, weights, ref_date, beta, lam, dc)
-    result = minimize(objective, x0=list(beta0))
-    return result.x, result.fun
+        result = minimize(lambda l: self._fit_lam(l, beta0), x0=list(lam0), bounds=[(1e-8, None), (1e-8, None)])
+        self.lam = result.x
+        self.beta, self.sse = self._fit_beta(self.lam, beta0)
 
-
-def fit_nss(prices, cashflows, weights, ref_date, dc, beta0=(0.2, 0.2, 0.2, 0.2), lam0=(0.5, 0.5), verbose=False):
-    step = [0]
-
-    def objective(lam):
-        _, sse = fit_beta(prices, cashflows, weights, ref_date, lam, dc, beta0)
-        if verbose:
-            step[0] += 1
-            print(f"Step {step[0]:>4d} | λ₁={lam[0]:.6f}  λ₂={lam[1]:.6f} | SSE={sse:.6f}")
+    def _fit_lam(self, lam, b0):
+        _, sse = self._fit_beta(lam, b0)
+        if self.verbose:
+            self.step += 1
+            print(f"Step {self.step:>4d} | λ₁={lam[0]:.6f}  λ₂={lam[1]:.6f} | SSE={sse:.6f}")
         return sse
 
-    result = minimize(objective, x0=list(lam0), bounds=[(1e-8, None), (1e-8, None)])
-    beta, sse = fit_beta(prices, cashflows, weights, ref_date, result.x, dc, beta0)
-    return beta, result.x, sse
+    def _fit_beta(self, lam, b0):
+        result = minimize(lambda beta: self._sse(beta, lam), x0=list(b0))
+        return result.x, result.fun
+
+    def _sse(self, beta, lam):
+        T = self.dc.year_fraction(self.ref_date, self.cashflows.index)
+        yc = pd.Series(data=nss(T, beta, lam), index=self.cashflows.index)
+        discf = (1 + yc) ** (-T)
+        prices_dcf = self.cashflows.multiply(discf, axis=0).sum()
+        return (((prices - prices_dcf) ** 2) * self.weights).sum()
+
+
+
+
+
+
 
 # Read data and generate instances
 df = raw_ntnb()
@@ -55,4 +64,5 @@ for mat in df["maturity"].to_list():
 
 all_cashflows = pd.concat(all_cashflows, axis=1).fillna(0)
 
-print(fit_nss(prices, all_cashflows, 1/duration, dt, dc, verbose=True))
+bnss = BootstrapNSS(prices, all_cashflows, 1/duration, dt, dc, verbose=True)
+print(bnss.beta, bnss.lam, bnss.sse)

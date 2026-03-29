@@ -1,21 +1,39 @@
 import pandas as pd
+from scipy.optimize import minimize
 from fixinc.nss import nss
 from fixinc.bond import NTNB
 from data.readers import raw_ntnb
 from fixinc.daycount import DayCount
 
 # Custom Functions
-def get_nss(prices, cashflows, weights, ref_date, beta0=(0.2, 0.2, 0.2, 0.2), lam0=(0.5, 0.5)):
-
+def get_nss(prices, cashflows, weights, ref_date, beta, lam, dc):
     T = dc.year_fraction(ref_date, cashflows.index)
-
-    # TODO optimize over lambda
-    # TODO optimize over beta
-    yc = pd.Series(data=nss(T, beta0, lam0), index=cashflows.index)
+    yc = pd.Series(data=nss(T, beta, lam), index=cashflows.index)
     discf = (1 + yc) ** (-T)
     prices_dcf = cashflows.multiply(discf, axis=0).sum()
     sse = (((prices - prices_dcf) ** 2) * weights).sum()
     return sse
+
+
+def fit_beta(prices, cashflows, weights, ref_date, lam, dc, beta0=(0.2, 0.2, 0.2, 0.2)):
+    objective = lambda beta: get_nss(prices, cashflows, weights, ref_date, beta, lam, dc)
+    result = minimize(objective, x0=list(beta0))
+    return result.x, result.fun
+
+
+def fit_nss(prices, cashflows, weights, ref_date, dc, beta0=(0.2, 0.2, 0.2, 0.2), lam0=(0.5, 0.5), verbose=False):
+    step = [0]
+
+    def objective(lam):
+        _, sse = fit_beta(prices, cashflows, weights, ref_date, lam, dc, beta0)
+        if verbose:
+            step[0] += 1
+            print(f"Step {step[0]:>4d} | λ₁={lam[0]:.6f}  λ₂={lam[1]:.6f} | SSE={sse:.6f}")
+        return sse
+
+    result = minimize(objective, x0=list(lam0), bounds=[(1e-8, None), (1e-8, None)])
+    beta, sse = fit_beta(prices, cashflows, weights, ref_date, result.x, dc, beta0)
+    return beta, result.x, sse
 
 # Read data and generate instances
 df = raw_ntnb()
@@ -37,4 +55,4 @@ for mat in df["maturity"].to_list():
 
 all_cashflows = pd.concat(all_cashflows, axis=1).fillna(0)
 
-print(get_nss(prices, all_cashflows, 1/duration, dt))
+print(fit_nss(prices, all_cashflows, 1/duration, dt, dc, verbose=True))

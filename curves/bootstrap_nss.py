@@ -1,10 +1,8 @@
 import pandas as pd
-import matplotlib.pyplot as plt
 from fixinc.bond import NTNB
-from fixinc.nss import BootstrapNSS, nss
+from fixinc.nss import BootstrapNSS
 from data.readers import raw_ntnb
 from fixinc.daycount import DayCount
-from utils import file_path
 from tqdm import tqdm
 
 

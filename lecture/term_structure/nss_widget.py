@@ -27,13 +27,13 @@ fig = plt.figure(figsize=(size * (16 / 7.3), size))
 ax = plt.subplot2grid((1, 2), (0, 0))
 ax.plot(
     t_range,
-    [nss(t, b1, b2, b3, b4, l1, l2) for t in t_range],
+    nss(t_range, [b1, b2, b3, b4], [l1, l2]),
     label="2025-10-21",
     color=BLUE,
 )
 c_recon, = ax.plot(
     t_range,
-    [nss(t, b1, b2, b3, b4, l1, l2) for t in t_range],
+    nss(t_range, [b1, b2, b3, b4], [l1, l2]),
     label="Reconstructed",
     color=RED,
 )
@@ -114,7 +114,7 @@ def update(val):
     nl1 = slide_l1.val
     nl2 = slide_l2.val
 
-    c_recon.set_ydata([nss(t, nb1, nb2, nb3, nb4, nl1, nl2) for t in t_range])
+    c_recon.set_ydata(nss(t_range, [nb1, nb2, nb3, nb4], [nl1, nl2]))
 
     # ax.relim()
     # ax.autoscale_view()

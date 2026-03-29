@@ -1,8 +1,10 @@
 import pandas as pd
+import matplotlib.pyplot as plt
 from fixinc.bond import NTNB
 from fixinc.nss import BootstrapNSS, nss
 from data.readers import raw_ntnb
 from fixinc.daycount import DayCount
+from utils import BLUE
 
 
 # Read data and generate instances
@@ -37,4 +39,12 @@ yc = pd.Series(
     index=du,
 )
 
-print(yc)
+fig, ax = plt.subplots()
+ax.plot(yc.index, yc.values, color=BLUE)
+ax.set_title(f"NSS Yield Curve — {dt.date()}")
+ax.set_xlabel("Maturity (Years)")
+ax.set_ylabel("Zero Yield")
+ax.yaxis.grid(color="grey", linestyle="-", linewidth=0.5, alpha=0.5)
+ax.xaxis.grid(color="grey", linestyle="-", linewidth=0.5, alpha=0.5)
+plt.tight_layout()
+plt.show()

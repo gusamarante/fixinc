@@ -108,12 +108,13 @@ class BootstrapNSS:
             Weighted sum of squared pricing errors at the optimum.
         """
         self.step = 0
-        self.prices = prices
-        self.cashflows = cashflows
-        self.weights = weights
-        self.ref_date = ref_date
-        self.dc = dc
         self.verbose = verbose
+
+        # Precompute arrays used on every SSE evaluation
+        self._T = dc.year_fraction(ref_date, cashflows.index)
+        self._cf = cashflows.to_numpy()
+        self._prices = prices.to_numpy()
+        self._weights = weights.to_numpy()
 
         result = minimize(lambda l: self._fit_lam(l, beta0), x0=list(lam0), bounds=[(1e-8, None), (1e-8, None)])
         self.lam = result.x
@@ -131,8 +132,7 @@ class BootstrapNSS:
         return result.x, result.fun
 
     def _sse(self, beta, lam):
-        T = self.dc.year_fraction(self.ref_date, self.cashflows.index)
-        yc = pd.Series(data=nss(T, beta, lam), index=self.cashflows.index)
-        discf = (1 + yc) ** (-T)
-        prices_dcf = self.cashflows.multiply(discf, axis=0).sum()
-        return (((self.prices - prices_dcf) ** 2) * self.weights).sum()
+        base = np.maximum(1 + nss(self._T, beta, lam), 1e-8)  # Avoids numerical warnings during the optimization
+        discf = base ** (-self._T)
+        prices_dcf = self._cf.T @ discf
+        return (((self._prices - prices_dcf) ** 2) * self._weights).sum()

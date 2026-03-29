@@ -255,10 +255,10 @@ class DayCount:
 
         Parameters
         ----------
-        d1: str, pandas.Timestamp, pandas.Series, numpy.datetime64, or array-like
+        d1: str, pandas.Timestamp, pandas.Series, numpy.datetime64, pandas.DatetimeIndex or array-like
             Start date(s)
 
-        d2: str, pandas.Timestamp, pandas.Series, numpy.datetime64, or array-like
+        d2: str, pandas.Timestamp, pandas.Series, numpy.datetime64, pandas.DatetimeIndex or array-like
             End date(s)
 
         Returns

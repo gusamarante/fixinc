@@ -8,7 +8,6 @@ from fixinc.daycount import DayCount
 CURVE_ID = "ntnb"
 DB_PATH = "../data/nss_parameters.db"
 
-# TODO logic to "fill" dates, starting from the most recent.
 # TODO Logic to "correct" bad estimates.
 
 # Connect to (or create) the database and ensure the table exists
@@ -48,6 +47,8 @@ dates2loop = all_dates.difference(stored_dates).sort_values(ascending=False)
 for t in dates2loop:
     aux_raw = df[df["reference date"] == t].sort_values("du").dropna(subset="yield")
     aux_raw = aux_raw[aux_raw["maturity"].dt.month.isin([5, 8])]  # Remove weird maturities
+    aux_raw = aux_raw[aux_raw["price"] != 0]
+    aux_raw = aux_raw[aux_raw["yield"] != 0]
 
     all_cashflows = []
     prices = pd.Series()
@@ -78,5 +79,49 @@ bad_days = pd.read_sql_query(
     "SELECT * FROM nss_parameters WHERE curve_id = ? ORDER BY sse DESC",
     con, params=(CURVE_ID,), parse_dates=["date"]
 )
-con.close()
 print(bad_days)
+
+all_days = bad_days.set_index("date").sort_index().copy()
+
+for _, row in bad_days.head(10).iterrows():
+    t = row["date"]
+
+    # Get the next day's parameters as starting point
+    future = all_days.loc[all_days.index > t]
+    if future.empty:
+        continue
+    next_day = future.iloc[0]
+    beta0_new = (next_day["b1"], next_day["b2"], next_day["b3"], next_day["b4"])
+    lam0_new = (next_day["l1"], next_day["l2"])
+
+    aux_raw = df[df["reference date"] == t].sort_values("du").dropna(subset="yield")
+    aux_raw = aux_raw[aux_raw["maturity"].dt.month.isin([5, 8])]
+    aux_raw = aux_raw[aux_raw["price"] != 0]
+    aux_raw = aux_raw[aux_raw["yield"] != 0]
+
+    all_cashflows = []
+    prices = pd.Series()
+    duration = pd.Series()
+    for mat in aux_raw["maturity"].to_list():
+        try:
+            aux_cf = ntnb.get_cashflows(t, mat.year)
+            all_cashflows.append(aux_cf.rename(mat.year))
+            prices.loc[mat.year] = aux_raw[aux_raw["maturity"] == mat]["price"].iloc[-1]
+            duration.loc[mat.year] = aux_raw[aux_raw["maturity"] == mat]["modified duration"].iloc[-1]
+        except AssertionError:
+            continue
+
+    all_cashflows = pd.concat(all_cashflows, axis=1).fillna(0)
+    bnss = BootstrapNSS(prices, all_cashflows, 1/duration, t, dc, beta0=beta0_new, lam0=lam0_new, verbose=False)
+
+    if bnss.sse < row["sse"]:
+        print(f"Date: {t:%Y-%m-%d}, SSE improved: {row['sse']:.2f} -> {bnss.sse:.2f}")
+        con.execute(
+            "INSERT OR REPLACE INTO nss_parameters VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (CURVE_ID, t.date().isoformat(), *bnss.beta, *bnss.lam, bnss.sse)
+        )
+        con.commit()
+    else:
+        print(f"Date: {t:%Y-%m-%d}, no improvement (old={row['sse']:.2f}, new={bnss.sse:.2f})")
+
+con.close()

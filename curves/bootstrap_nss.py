@@ -72,4 +72,11 @@ for t in dates2loop:
     )
     con.commit()
 
+
+# Deal with bad days
+bad_days = pd.read_sql_query(
+    "SELECT * FROM nss_parameters WHERE curve_id = ? ORDER BY sse DESC",
+    con, params=(CURVE_ID,), parse_dates=["date"]
+)
 con.close()
+print(bad_days)

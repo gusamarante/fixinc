@@ -110,18 +110,28 @@ class BootstrapNSS:
         self.step = 0
         self.verbose = verbose
 
+        # Track the best solution seen across outer iterations
+        self._best_beta = None
+        self._best_lam = None
+        self._best_sse = np.inf
+
         # Precompute arrays used on every SSE evaluation
         self._T = dc.year_fraction(ref_date, cashflows.index)
         self._cf = cashflows.to_numpy()
         self._prices = prices.to_numpy()
         self._weights = weights.to_numpy()
 
-        result = minimize(lambda l: self._fit_lam(l, beta0), x0=list(lam0), bounds=[(1e-8, None), (1e-8, None)])
-        self.lam = result.x
-        self.beta, self.sse = self._fit_beta(self.lam, beta0)
+        minimize(lambda l: self._fit_lam(l, beta0), x0=list(lam0), bounds=[(1e-8, None), (1e-8, None)])
+        self.beta = self._best_beta
+        self.lam = self._best_lam
+        self.sse = self._best_sse
 
     def _fit_lam(self, lam, b0):
-        _, sse = self._fit_beta(lam, b0)
+        beta, sse = self._fit_beta(lam, b0)
+        if np.isfinite(sse) and sse < self._best_sse:
+            self._best_beta = beta
+            self._best_lam = lam.copy()
+            self._best_sse = sse
         if self.verbose:
             self.step += 1
             print(f"Step {self.step:>4d} | λ₁={lam[0]:.6f}  λ₂={lam[1]:.6f} | SSE={sse:.6f}")

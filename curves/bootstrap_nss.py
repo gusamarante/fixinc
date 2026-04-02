@@ -79,15 +79,20 @@ for t in dates2loop:
 # ==============================
 # ===== Deal with bad days =====
 # ==============================
-bad_days = pd.read_sql_query(
-    "SELECT * FROM nss_parameters WHERE curve_id = ? ORDER BY sse DESC",
+# TODO set bounds for the parameters
+all_days = pd.read_sql_query(
+    "SELECT * FROM nss_parameters WHERE curve_id = ? ORDER BY date",
     con, params=(CURVE_ID,), parse_dates=["date"]
 )
+
+bad_sse = all_days.nlargest(10, "sse")
+bad_params = [all_days.iloc[all_days[col].abs().nlargest(10).index] for col in ["b1", "b2", "b3", "b4", "l1", "l2"]]
+bad_days = pd.concat([bad_sse] + bad_params).drop_duplicates(subset="date").reset_index(drop=True)
 print(bad_days)
 
-all_days = bad_days.set_index("date").sort_index().copy()
+all_days = all_days.set_index("date").sort_index().copy()
 
-for _, row in bad_days.head(10).iterrows():
+for _, row in bad_days.iterrows():
     t = row["date"]
 
     # Get the next day's parameters as starting point
@@ -97,6 +102,8 @@ for _, row in bad_days.head(10).iterrows():
     next_day = future.iloc[0]
     beta0_new = (next_day["b1"], next_day["b2"], next_day["b3"], next_day["b4"])
     lam0_new = (next_day["l1"], next_day["l2"])
+    # beta0_new = BETA0
+    # lam0_new = LAM0
 
     aux_raw = df[df["reference date"] == t].sort_values("du").dropna(subset="yield")
     aux_raw = aux_raw[aux_raw["maturity"].dt.month.isin([5, 8])]

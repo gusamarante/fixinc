@@ -1,4 +1,5 @@
 import sqlite3
+import numpy as np
 import pandas as pd
 from fixinc.bond import NTNB
 from fixinc.nss import BootstrapNSS
@@ -28,7 +29,7 @@ con.execute("""
 """)
 con.commit()
 
-BETA0 = (0.06, 0.03, 0.0, 0.0)
+BETA0 = (0.06, 0.0, 0.0, 0.0)
 LAM0 = (1.2, 0.5)
 
 df = raw_ntnb()
@@ -43,12 +44,13 @@ stored_dates = pd.read_sql_query(
 
 all_dates = pd.DatetimeIndex(df["reference date"].unique())
 dates2loop = all_dates.difference(stored_dates).sort_values(ascending=False)
+dates2loop = dates2loop[dates2loop >= "2005-01-01"]
 
 for t in dates2loop:
     aux_raw = df[df["reference date"] == t].sort_values("du").dropna(subset="yield")
     aux_raw = aux_raw[aux_raw["maturity"].dt.month.isin([5, 8])]  # Remove weird maturities
     aux_raw = aux_raw[aux_raw["price"] != 0]
-    aux_raw = aux_raw[aux_raw["yield"] != 0]
+    aux_raw = aux_raw[~np.isclose(aux_raw["yield"], 0, atol=1e-6)]
 
     all_cashflows = []
     prices = pd.Series()
@@ -57,7 +59,7 @@ for t in dates2loop:
         try:
             aux_cf = ntnb.get_cashflows(t, mat.year)
             all_cashflows.append(aux_cf.rename(mat.year))
-            prices.loc[mat.year] = aux_raw[aux_raw["maturity"] == mat]["price"].iloc[-1]
+            prices.loc[mat.year] = aux_raw[aux_raw["maturity"] == mat]["price"].iloc[-1] + + aux_raw[aux_raw["maturity"] == mat]["coupon"].iloc[-1]
             duration.loc[mat.year] = aux_raw[aux_raw["maturity"] == mat]["modified duration"].iloc[-1]
         except AssertionError:
             # If weird maturity appears, skip this one
@@ -74,7 +76,9 @@ for t in dates2loop:
     con.commit()
 
 
-# Deal with bad days
+# ==============================
+# ===== Deal with bad days =====
+# ==============================
 bad_days = pd.read_sql_query(
     "SELECT * FROM nss_parameters WHERE curve_id = ? ORDER BY sse DESC",
     con, params=(CURVE_ID,), parse_dates=["date"]
@@ -97,7 +101,7 @@ for _, row in bad_days.head(10).iterrows():
     aux_raw = df[df["reference date"] == t].sort_values("du").dropna(subset="yield")
     aux_raw = aux_raw[aux_raw["maturity"].dt.month.isin([5, 8])]
     aux_raw = aux_raw[aux_raw["price"] != 0]
-    aux_raw = aux_raw[aux_raw["yield"] != 0]
+    aux_raw = aux_raw[~np.isclose(aux_raw["yield"], 0, atol=1e-8)]
 
     all_cashflows = []
     prices = pd.Series()
@@ -106,7 +110,7 @@ for _, row in bad_days.head(10).iterrows():
         try:
             aux_cf = ntnb.get_cashflows(t, mat.year)
             all_cashflows.append(aux_cf.rename(mat.year))
-            prices.loc[mat.year] = aux_raw[aux_raw["maturity"] == mat]["price"].iloc[-1]
+            prices.loc[mat.year] = aux_raw[aux_raw["maturity"] == mat]["price"].iloc[-1] + aux_raw[aux_raw["maturity"] == mat]["coupon"].iloc[-1]
             duration.loc[mat.year] = aux_raw[aux_raw["maturity"] == mat]["modified duration"].iloc[-1]
         except AssertionError:
             continue

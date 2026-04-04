@@ -9,8 +9,6 @@ from fixinc.daycount import DayCount
 CURVE_ID = "ntnb"
 DB_PATH = "../data/nss_parameters.db"
 
-# TODO Logic to "correct" bad estimates.
-
 # Connect to (or create) the database and ensure the table exists
 con = sqlite3.connect(DB_PATH)
 con.execute("""
@@ -46,6 +44,9 @@ all_dates = pd.DatetimeIndex(df["reference date"].unique())
 dates2loop = all_dates.difference(stored_dates).sort_values(ascending=False)
 dates2loop = dates2loop[dates2loop >= "2005-01-01"]
 
+beta0_run = BETA0
+lam0_run = LAM0
+
 for t in dates2loop:
     aux_raw = df[df["reference date"] == t].sort_values("du").dropna(subset="yield")
     aux_raw = aux_raw[aux_raw["maturity"].dt.month.isin([5, 8])]  # Remove weird maturities
@@ -59,15 +60,24 @@ for t in dates2loop:
         try:
             aux_cf = ntnb.get_cashflows(t, mat.year)
             all_cashflows.append(aux_cf.rename(mat.year))
-            prices.loc[mat.year] = aux_raw[aux_raw["maturity"] == mat]["price"].iloc[-1] + + aux_raw[aux_raw["maturity"] == mat]["coupon"].iloc[-1]
+
+            if (aux_raw[aux_raw["maturity"] == mat]["coupon"].sum() != 0) and (t.day == 15):
+                # If there is a coupon payment on the 15th
+                prices.loc[mat.year] = aux_raw[aux_raw["maturity"] == mat]["price"].iloc[-1] + aux_raw[aux_raw["maturity"] == mat]["coupon"].iloc[-1]
+            else:
+                prices.loc[mat.year] = aux_raw[aux_raw["maturity"] == mat]["price"].iloc[-1]
+
             duration.loc[mat.year] = aux_raw[aux_raw["maturity"] == mat]["modified duration"].iloc[-1]
         except AssertionError:
             # If weird maturity appears, skip this one
             continue
 
     all_cashflows = pd.concat(all_cashflows, axis=1).fillna(0)
-    bnss = BootstrapNSS(prices, all_cashflows, 1/duration, t, dc, beta0=BETA0, lam0=LAM0, verbose=False)
-    print(f"Date: {t:%Y-%m-%d}, SSE={bnss.sse:.2f}")
+    bnss = BootstrapNSS(prices, all_cashflows, 1/duration, t, dc, beta0=beta0_run, lam0=lam0_run, verbose=False)
+    print(f"Date: {t:%Y-%m-%d}, SSE={bnss.sse:.2f}, Beta={bnss.beta}, Lambda={bnss.lam}")
+
+    beta0_run = tuple(bnss.beta)
+    lam0_run = tuple(bnss.lam)
 
     con.execute(
         "INSERT OR REPLACE INTO nss_parameters VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -79,7 +89,6 @@ for t in dates2loop:
 # ==============================
 # ===== Deal with bad days =====
 # ==============================
-# TODO set bounds for the parameters
 all_days = pd.read_sql_query(
     "SELECT * FROM nss_parameters WHERE curve_id = ? ORDER BY date",
     con, params=(CURVE_ID,), parse_dates=["date"]

@@ -121,7 +121,14 @@ class BootstrapNSS:
         self._prices = prices.to_numpy()
         self._weights = weights.to_numpy()
 
-        minimize(lambda l: self._fit_lam(l, beta0), x0=list(lam0), bounds=[(1e-8, None), (1e-8, None)])
+        lam0_sorted = (max(lam0), min(lam0))
+        minimize(
+            lambda l: self._fit_lam(l, beta0),
+            x0=list(lam0_sorted),
+            bounds=[(1e-8, 30), (1e-8, 30)],
+            constraints={"type": "ineq", "fun": lambda l: l[0] - l[1] - 0.2},
+            method="SLSQP",
+        )
         self.beta = self._best_beta
         self.lam = self._best_lam
         self.sse = self._best_sse
@@ -138,11 +145,14 @@ class BootstrapNSS:
         return sse
 
     def _fit_beta(self, lam, b0):
-        result = minimize(lambda beta: self._sse(beta, lam), x0=list(b0))
+        result = minimize(lambda beta: self._sse(beta, lam), x0=list(b0),
+                          bounds=[(0.0, 0.5), (None, None), (None, None), (None, None)])
         return result.x, result.fun
 
-    def _sse(self, beta, lam):
+    def _sse(self, beta, lam, alpha=0.5):
         base = np.maximum(1 + nss(self._T, beta, lam), 1e-8)  # Avoids numerical warnings during the optimization
         discf = base ** (-self._T)
         prices_dcf = self._cf.T @ discf
-        return (((self._prices - prices_dcf) ** 2) * self._weights).sum()
+        pricing_error = (((self._prices - prices_dcf) ** 2) * self._weights).sum()
+        regularization = alpha * (beta[1] ** 2 + beta[2] ** 2 + beta[3] ** 2 + lam[0] ** 2 + lam[1] ** 2)
+        return pricing_error + regularization

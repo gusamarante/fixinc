@@ -8,7 +8,7 @@ DB_PATH = "../../data/nss_parameters.db"
 
 con = sqlite3.connect(DB_PATH)
 params = pd.read_sql_query(
-    "SELECT * FROM nss_parameters WHERE curve_id = 'ntnb' ORDER BY date",
+    "SELECT * FROM nss_parameters WHERE curve_id = 'ntnb2' ORDER BY date",
     con, parse_dates=["date"]
 )
 con.close()

@@ -10,13 +10,13 @@ DB_PATH = "../../data/nss_parameters.db"
 
 con = sqlite3.connect(DB_PATH)
 ntnb = pd.read_sql(
-    "SELECT * FROM nss_parameters WHERE curve_id = 'ntnb'",
+    "SELECT * FROM nss_parameters WHERE curve_id = 'ntnb2'",
     con,
     index_col="date",
     parse_dates=["date"],
 )
 ntnf = pd.read_sql(
-    "SELECT * FROM nss_parameters WHERE curve_id = 'ntnf'",
+    "SELECT * FROM nss_parameters WHERE curve_id = 'ntnf2'",
     con,
     index_col="date",
     parse_dates=["date"],

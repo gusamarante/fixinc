@@ -1,5 +1,6 @@
 from fixinc.apis import SGS
-from fixinc.bond import Bond, ZeroCurve
+from fixinc.bond import Bond
+from fixinc.curve import ZeroCurve
 from fixinc.compounder import RateCompounder
 from fixinc.daycount import DayCount
 from fixinc.nss import nss

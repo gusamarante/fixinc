@@ -79,7 +79,8 @@ class DayCount:
 
         Parameters
         ----------
-        d: str, pandas.Timestamp, pandas.Series, numpy.datetime64, or array-like
+        d: str, pandas.Timestamp, pandas.DatetimeIndex, pandas.Series,
+        numpy.datetime64, or array-like
             Input date or dates to adjust
         """
         d = self._cast_numpy_date(d)
@@ -95,10 +96,10 @@ class DayCount:
 
         Parameters
         ----------
-        d1: str, pandas.Timestamp, pandas.Series, numpy.datetime64, or array-like
+        d1: str, pandas.Timestamp, pandas.Series, numpy.datetime64, pandas.DatetimeIndex or array-like
             Start date(s)
 
-        d2: str, pandas.Timestamp, pandas.Series, numpy.datetime64, or array-like
+        d2: str, pandas.Timestamp, pandas.Series, numpy.datetime64, pandas.DatetimeIndex or array-like
             End date(s)
 
         Returns
@@ -254,10 +255,10 @@ class DayCount:
 
         Parameters
         ----------
-        d1: str, pandas.Timestamp, pandas.Series, numpy.datetime64, or array-like
+        d1: str, pandas.Timestamp, pandas.Series, numpy.datetime64, pandas.DatetimeIndex or array-like
             Start date(s)
 
-        d2: str, pandas.Timestamp, pandas.Series, numpy.datetime64, or array-like
+        d2: str, pandas.Timestamp, pandas.Series, numpy.datetime64, pandas.DatetimeIndex or array-like
             End date(s)
 
         Returns

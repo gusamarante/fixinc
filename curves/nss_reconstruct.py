@@ -4,8 +4,8 @@ import pandas as pd
 from fixinc import nss
 from utils import data_output
 
-maturities_ntnf = [6, 12, 24, 36, 48, 60, 72, 84, 96, 108, 120]
-maturities_ntnb = [24, 36, 48, 60, 72, 84, 96, 108, 120]
+maturities_ntnf = list(range(1, 121))
+maturities_ntnb = list(range(1, 121))
 
 DB_PATH = "../data/nss_parameters.db"
 

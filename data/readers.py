@@ -123,6 +123,11 @@ def raw_ltn_ntnf():
 
     return ntnf
 
+def trackers_ltn_ntnf():
+    df = pd.read_csv(data_reader.joinpath("trackers_ltn_ntnf.csv"), index_col=0)
+    df.index = pd.to_datetime(df.index)
+    return df
+
 
 # ===============
 # ===== LFT =====

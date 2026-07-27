@@ -201,6 +201,7 @@ class Bond:
         disc = self.rc.yield_to_disc(y, t, cf.index)
         return (cf * disc).sum()
 
+
 class NTNB(Bond):
 
     def __init__(self):

@@ -47,3 +47,7 @@ class ZeroCurve:
 
         fras = self.yields.apply(get_fra, axis=1)
         return fras
+
+
+class Bootstrap:
+    pass

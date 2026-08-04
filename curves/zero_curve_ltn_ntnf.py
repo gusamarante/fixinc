@@ -43,4 +43,9 @@ for bc in df_test.index:
 
 all_cashflows = pd.concat(all_cashflows, axis=1).fillna(0).sort_index()
 
-# TODO PAREI AQUI - passar cashflows, prices e duration para a classe de bootstrap, que deve retornar uma curva zero
+
+boot = Bootstrap(
+    cashflows=all_cashflows,
+    prices=all_prices,
+    durations=all_duration,
+)

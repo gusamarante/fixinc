@@ -2,6 +2,7 @@ import numpy as np
 from scipy.interpolate import make_interp_spline, CubicSpline, interp1d
 
 from fixinc.compounder import RateCompounder
+from fixinc.daycount import DayCount
 
 
 class ZeroCurve:
@@ -50,4 +51,13 @@ class ZeroCurve:
 
 
 class Bootstrap:
-    pass
+
+    def __init__(self, cashflows, prices, durations):
+        # TODO Documentation
+        self.cashflows = cashflows
+        self.prices = prices
+        self.durations = durations
+
+
+
+

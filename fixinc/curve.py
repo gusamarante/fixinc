@@ -54,6 +54,7 @@ class ZeroCurve:
 
 
 class Bootstrap:
+    # TODO add a method to read the output as a zero curve, passing a convention
 
     weighting_methods = ["none", "duration", "inverse duration"]
 

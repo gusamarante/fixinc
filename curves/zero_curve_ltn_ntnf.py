@@ -47,5 +47,9 @@ all_cashflows = pd.concat(all_cashflows, axis=1).fillna(0).sort_index()
 boot = Bootstrap(
     cashflows=all_cashflows,
     prices=all_prices,
+    ref_date="2026-03-25",
     durations=all_duration,
 )
+
+yc = boot.get_zero_curve("anbima", "bus/252", "compound")
+print(yc)

@@ -54,11 +54,11 @@ class ZeroCurve:
 
 
 class Bootstrap:
-    # TODO add a method to read the output as a zero curve, passing a convention
+    # TODO add a warning if the resulting discount curve is not stricly decreasing
 
     weighting_methods = ["none", "duration", "inverse duration"]
 
-    def __init__(self, cashflows, prices, durations=None, weighting="none"):
+    def __init__(self, cashflows, prices, ref_date, durations=None, weighting="none"):
         """
         Non-parametric bootstrap of a discount curve. Finds the discount
         factor of every cashflow date that best prices a cross-section of
@@ -84,7 +84,7 @@ class Bootstrap:
         interpolation of the two neighboring knots.
 
         The output of the class is a discount factor curve which are free of
-        market convetions (yield compounding, day-counting, etc) convention
+        market convetions (yield compounding, day-counting, etc.) convention
         free.
 
         Parameters
@@ -96,6 +96,10 @@ class Bootstrap:
 
         prices: pandas.Series
             Observed market prices, indexed by bond identifier.
+
+        ref_date: date-like
+            Reference date of prices and cashflows. Not used in the bootstrap
+            process, only for other operations that rely on market conventions.
 
         durations: pandas.Series, optional
             Duration of each bond, indexed by bond identifier. Only used to
@@ -192,9 +196,13 @@ class Bootstrap:
 
         self._assert_matching_bonds(cashflows, prices, durations)
 
+        self.ref_date = pd.Timestamp(ref_date)
         self.cashflows = cashflows
         self.bonds = cashflows.columns
         self.dates = cashflows.index
+
+        assert self.ref_date <= self.dates.min(), \
+            "Reference date must earlier than cashflow dates"
 
         # Reindex so that bonds are in the same order everywhere
         self.prices = prices.reindex(self.bonds)
@@ -271,6 +279,37 @@ class Bootstrap:
         """
         pricing_errors = self.get_prices(discount) - self.prices
         return (self.weights * (pricing_errors ** 2)).sum()
+
+    def get_zero_curve(self, calendar, dcc, yc):
+        """
+        Converts the bootstrapped discounts into a zero curve, under a
+        given set of market conventions.
+
+        Parameters
+        ----------
+        calendar: str or None
+            Calendar identifier used to determine holidays. Supports
+            calendars available in `DayCounts`
+
+        dcc: str
+            Day count convention, used to measure the term of each date.
+            Supports conventions available in `DayCounts`
+
+        yc: str
+            Yield convention, relating the discount factor of a date to
+            its rate `y` over a year fraction `n`. Supports conventions
+            available in `RateCompounder`
+
+        Returns
+        -------
+        pandas.Series
+            Zero rate of each cashflow date, as a decimal, indexed by date
+        """
+        dc = DayCount(calendar, dcc)
+        rc = RateCompounder(yc, dc)
+        yf = dc.year_fraction(self.ref_date, self.discount.index)
+        yc = rc.factor_to_yield_yf(1 / self.discount, yf)
+        return yc
 
     def _get_weights(self):
         if self.weighting == "none":

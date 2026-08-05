@@ -59,9 +59,9 @@ class Bootstrap:
 
     def __init__(self, cashflows, prices, durations=None, weighting="none"):
         """
-        Classic (non-parametric) bootstrap of a discount curve. Finds the
-        discount factor of every cashflow date that best prices a cross
-        section of bonds, in the weighted least squares sense.
+        Non-parametric bootstrap of a discount curve. Finds the discount
+        factor of every cashflow date that best prices a cross-section of
+        bonds, in the weighted least squares sense.
 
         The model price of a bond is the sum of its cashflows multiplied by
         the discount factor of their respective dates
@@ -80,21 +80,11 @@ class Bootstrap:
         maturity dates of the bonds do, and they are called the knots of the
         curve. A date that is not a maturity, a coupon date sitting between
         two maturities, has its discount factor restricted to the linear
-        interpolation of the two neighbouring knots.
+        interpolation of the two neighboring knots.
 
-        This restriction is what identifies the curve. Solving one free
-        discount factor per cashflow date is usually underdetermined, since
-        coupon dates outnumber the bonds, and a date that no bond matures on
-        is never pinned down on its own. The minimum norm solution such a
-        system returns prices the bonds perfectly while putting the
-        unidentified factors anywhere, which produces a jagged and
-        economically meaningless curve. Interpolating them instead leaves as
-        many free parameters as there are maturities, and yields a smooth
-        curve.
-
-        Discount factors are convention free. Turning them into rates
-        requires a day count convention and a compounding convention, and is
-        left to the caller.
+        The output of the class is a discount factor curve which are free of
+        market convetions (yield compounding, day-counting, etc) convention
+        free.
 
         Parameters
         ----------
@@ -115,7 +105,7 @@ class Bootstrap:
             How to weight the pricing error of each bond in the objective
             function. Supported values:
             - 'none': every bond has the same weight (default)
-            - 'duration': weight proportional to duration, favouring the fit
+            - 'duration': weight proportional to duration, favoring the fit
                           of the long end
             - 'inverse duration': weight proportional to 1 / duration, which
                                   approximates weighting the errors in yield
@@ -123,6 +113,75 @@ class Bootstrap:
             Weights are normalized to add up to 1, so the objective is a mean
             squared error under every choice. Normalization does not change
             the fitted discount factors, only the scale of `mse`.
+
+        Examples
+        --------
+        The three panels below only differ on how many bonds there are and on
+        which dates they pay, and together they cover every way the problem
+        can turn out. Each table holds the cashflow matrix, with the dates `t`
+        down the side and the bonds across the top, and the observed price of
+        each bond on the last row.
+
+        1) Exactly identified. Three bonds and three dates, and every date is
+        the maturity of one of the bonds.
+
+            t      |    A      B      C
+            -------+-------------------
+            0      |  100      4      4
+            1      |    0    100      5
+            2      |    0      0    102
+            -------+-------------------
+            price  |   95     90     80
+
+        Each bond matures one date after the previous one, so the cashflow
+        matrix is triangular and there are three knots for three prices. One
+        curve prices all three bonds exactly, [0.950000, 0.862000, 0.704804],
+        and it is found by working down from the shortest bond, which is what
+        the bootstrap is named after. There is no pricing error to trade off,
+        so `weighting` makes no difference here.
+
+        2) Overidentified. Bond D is added, maturing on the same date as
+        bond C.
+
+            t      |    A      B      C      D
+            -------+--------------------------
+            0      |  100      4      4      5
+            1      |    0    100      5      5
+            2      |    0      0    102    105
+            -------+--------------------------
+            price  |   95     90     80     82
+
+        The dates, and therefore the knots, are still three, but there are now
+        four prices to match. Bonds A, B and C already pin the curve down, and
+        that curve values bond D at 83.06 rather than the 82 it trades at, so
+        no set of discount factors prices all four. The fit becomes a
+        compromise, here erring by -0.53 on bond C and +0.52 on bond D, and
+        `weighting` is what decides which bonds are matched more closely.
+
+        3) Underidentified without the knot restriction. Bond C now pays a
+        coupon on date 2 and matures on date 3.
+
+            t      |    A       B        C
+            -------+----------------------
+            0      |  100       4        5
+            1      |    0     104        5
+            2      |    0       0        5
+            3      |    0       0      105
+            -------+----------------------
+            price  |   95    97.4   98.575
+
+        No bond matures on date 2, it only carries a coupon of bond C. A free
+        discount factor per date would mean four unknowns for three prices,
+        and the fourth one is not something the bonds have any information
+        about: the minimum norm solution that comes out of it prices the three
+        bonds perfectly while putting a discount factor of 0.04 on date 2,
+        well below both of the surrounding dates.
+
+        Restricting date 2 to the interpolation of dates 1 and 3 leaves three
+        knots for three prices. The 5 that bond C pays on date 2 is split
+        evenly between the knots on each side, and the curve comes out as
+        [0.950000, 0.900000, 0.855000, 0.810000], smooth and pricing every
+        bond exactly.
         """
         assert weighting in self.weighting_methods, \
             f"weighting method '{weighting}' not implemented"

@@ -4,7 +4,6 @@ flat-forward method
 """
 from utils import data_output
 from data.readers import di_raw
-import pandas as pd
 import numpy as np
 
 

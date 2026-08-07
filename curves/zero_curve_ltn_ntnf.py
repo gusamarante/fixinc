@@ -2,6 +2,7 @@ from data.readers import raw_ltn_ntnf
 from fixinc import Bootstrap, LTN, NTNF, DayCount
 import pandas as pd
 from tqdm import tqdm
+from utils import data_output
 
 
 bltn = LTN()
@@ -67,7 +68,11 @@ for t in tqdm(all_dates):
 
 
 all_curves = pd.concat(all_curves, axis=1).sort_index(axis=0).sort_index(axis=1).T
-print(all_curves)
 
-# TODO interpolate, select months and save
-# TODO why was I doing this again?
+all_curves = all_curves.interpolate(method='index', axis=1, limit_area='inside')
+max_months = int(all_curves.columns[-1] / 21)
+desired_maturities = [21 * t for t in range(1, max_months)]
+all_curves = all_curves[desired_maturities]
+all_curves.columns = [f"{int(mat/21)}m" for mat in all_curves.columns]
+
+all_curves.to_csv(data_output.joinpath('zero_ltn_ntnf_monthly_maturities.csv'))

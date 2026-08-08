@@ -4,7 +4,7 @@ All the functions in this file only work on my computer. These are outside the
 """
 from tqdm import tqdm
 import pandas as pd
-from utils import file_path, data_reader, dropbox_path  # TODO Deal with the right level to call
+from utils import file_path, data_reader, dropbox_path
 
 
 last_year = 2026  # Year of the last file available
@@ -93,6 +93,14 @@ def trackers_ntnb():
     df.index = pd.to_datetime(df.index)
     return df
 
+def zero_curve_ntnb():
+    df = pd.read_csv(
+        data_reader.joinpath("zero_ntnb_monthly_maturities.csv"),
+        index_col=0,
+    )
+    df.index = pd.to_datetime(df.index)
+    return df
+
 
 # ========================
 # ===== NTNF and LTN =====
@@ -125,6 +133,14 @@ def raw_ltn_ntnf():
 
 def trackers_ltn_ntnf():
     df = pd.read_csv(data_reader.joinpath("trackers_ltn_ntnf.csv"), index_col=0)
+    df.index = pd.to_datetime(df.index)
+    return df
+
+def zero_curve_ltn_ntnf():
+    df = pd.read_csv(
+        data_reader.joinpath("zero_ltn_ntnf_monthly_maturities.csv"),
+        index_col=0,
+    )
     df.index = pd.to_datetime(df.index)
     return df
 
@@ -182,6 +198,7 @@ def selic_years_ahead():
 # ===== CDS =====
 # ===============
 def cds_sov():
+    # TODO Broken, needs new file
     data = pd.read_csv(
         dropbox_path.joinpath(f'data_cds.csv'),
         sep=";",
@@ -192,6 +209,7 @@ def cds_sov():
     return data
 
 def cds_idx():
+    # TODO Broken, needs new file
     data = pd.read_csv(
         dropbox_path.joinpath(f'data_cds_index.csv'),
         sep=";",

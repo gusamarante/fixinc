@@ -57,6 +57,7 @@ class Bootstrap:
     # TODO add a warning if the resulting discount curve is not stricly decreasing
 
     weighting_methods = ["none", "duration", "inverse duration"]
+    anchor_discount = 1.0  # Discount factor of the reference date
 
     def __init__(self, cashflows, prices, ref_date, durations=None, weighting="none"):
         """
@@ -82,6 +83,15 @@ class Bootstrap:
         curve. A date that is not a maturity, a coupon date sitting between
         two maturities, has its discount factor restricted to the linear
         interpolation of the two neighboring knots.
+
+        The reference date is an anchor of the interpolation, with its
+        discount factor fixed at 1 rather than fitted, since a cashflow paid
+        on the reference date is not discounted at all. A coupon paid before
+        the shortest bond matures is therefore interpolated between the
+        anchor and the first knot, instead of being extrapolated. The anchor
+        is a known constant, so the part of each price it accounts for moves
+        to the left hand side of the pricing equation and the problem stays
+        linear on the free discount factors.
 
         The output of the class is a discount factor curve which are free of
         market convetions (yield compounding, day-counting, etc.) convention
@@ -212,7 +222,7 @@ class Bootstrap:
         self.weights = self._get_weights()
 
         self.knots = self._get_knots()
-        self.interp_matrix = self._get_interp_matrix()
+        self.interp_matrix, self.anchor_weights = self._get_interp_matrix()
 
         self.knot_discount, self.rank = self._solve()
         self.discount = self.interpolate(self.knot_discount)
@@ -224,7 +234,9 @@ class Bootstrap:
         """
         Builds the discount factor of every cashflow date from the discount
         factors of the knots. Knots are returned untouched, and any other
-        date is the linear interpolation of its two neighbouring knots
+        date is the linear interpolation of its two neighbouring nodes, where
+        the nodes are the reference date, anchored at a discount factor of 1,
+        followed by the knots
 
         Parameters
         ----------
@@ -239,7 +251,8 @@ class Bootstrap:
         assert not knot_discount.isna().any(), \
             "'knot_discount' must cover every knot"
         return pd.Series(
-            data=self.interp_matrix @ knot_discount.values,
+            data=self.anchor_weights * self.anchor_discount
+                 + self.interp_matrix @ knot_discount.values,
             index=self.dates,
             name="discount factor",
         )
@@ -303,12 +316,18 @@ class Bootstrap:
         Returns
         -------
         pandas.Series
-            Zero rate of each cashflow date, as a decimal, indexed by date
+            Zero rate of each cashflow date, as a decimal, indexed by date.
+            Dates with a year fraction of zero are left out, as the zero rate
+            is not defined over no time at all
         """
         dc = DayCount(calendar, dcc)
         rc = RateCompounder(yc, dc)
         yf = dc.year_fraction(self.ref_date, self.discount.index)
-        yc = rc.factor_to_yield_yf(1 / self.discount, yf)
+
+        # A bond paying on the reference date itself puts a cashflow date at a
+        # year fraction of zero, which carries no rate to speak of
+        priced = yf > 0
+        yc = rc.factor_to_yield_yf(1 / self.discount[priced], yf[priced])
         return yc
 
     def _get_weights(self):
@@ -339,38 +358,51 @@ class Bootstrap:
             f"bonds with no cashflow at all: {sorted(self.bonds[~paying.any()])}"
 
         maturities = self.cashflows.apply(lambda cf: cf[cf != 0].index.max())
-        return pd.Index(maturities.values).unique().sort_values()
+        knots = pd.Index(maturities.values).unique().sort_values()
+
+        # A bond maturing on the reference date has the discount factor of the
+        # anchor, which is known, so it is not a free knot
+        knots = knots[knots > self.ref_date]
+        assert len(knots) > 0, \
+            "every bond matures on the reference date, there is no curve to fit"
+        return knots
+
+    def _get_nodes(self):
+        # The interpolation runs on the reference date, whose discount factor
+        # is the known anchor, followed by the knots
+        anchor = [self.ref_date]
+        if isinstance(self.dates, pd.DatetimeIndex):
+            return pd.DatetimeIndex(anchor).append(pd.DatetimeIndex(self.knots))
+        return pd.Index(anchor).append(pd.Index(self.knots))
 
     def _get_interp_matrix(self):
-        # Row i holds the weight of each knot in the discount factor of
-        # cashflow date i. A date that is itself a knot gets a weight of 1 on
-        # it, and any other date splits its weight between the knot before
-        # and the knot after, proportionally to the distance to each
+        # Row i holds the weight of each node in the discount factor of
+        # cashflow date i. A date that is itself a node gets a weight of 1 on
+        # it, and any other date splits its weight between the node before
+        # and the node after, proportionally to the distance to each
         x_dates = self._positions(self.dates)
-        x_knots = self._positions(self.knots)
+        x_nodes = self._positions(self._get_nodes())
 
-        n_dates, n_knots = len(x_dates), len(x_knots)
-        matrix = np.zeros((n_dates, n_knots))
+        n_dates, n_nodes = len(x_dates), len(x_nodes)
+        matrix = np.zeros((n_dates, n_nodes))
 
-        if n_knots == 1:
-            # Degenerate case, a single discount factor for every date
-            matrix[:, 0] = 1.0
-            return matrix
-
-        right = np.clip(np.searchsorted(x_knots, x_dates, side="left"), 1, n_knots - 1)
+        right = np.clip(np.searchsorted(x_nodes, x_dates, side="left"), 1, n_nodes - 1)
         left = right - 1
 
-        span = x_knots[right] - x_knots[left]
+        span = x_nodes[right] - x_nodes[left]
         # The last cashflow date is always the maturity of the longest bond,
-        # so there is nothing to extrapolate above the last knot. Below the
-        # first knot, which needs a coupon paid before the shortest bond
-        # matures, clipping holds the discount factor flat
-        weight_right = np.clip((x_dates - x_knots[left]) / span, 0.0, 1.0)
+        # and the first one never comes before the reference date, so the
+        # clipping below is only a guard against rounding, and no cashflow is
+        # ever priced by extrapolation
+        weight_right = np.clip((x_dates - x_nodes[left]) / span, 0.0, 1.0)
 
         rows = np.arange(n_dates)
         matrix[rows, left] = 1 - weight_right
         matrix[rows, right] = weight_right
-        return matrix
+
+        # The first column is the anchor, which is not fitted, so it is split
+        # away from the free knots
+        return matrix[:, 1:], matrix[:, 0]
 
     def _positions(self, index):
         # Interpolation runs on calendar days when the cashflows are indexed
@@ -386,13 +418,19 @@ class Bootstrap:
         # alone
         knot_cashflows = self.interp_matrix.T @ self.cashflows.values
 
+        # The discount factor of the anchor is known, so the part of each
+        # price that it accounts for is a constant and moves to the left hand
+        # side of the pricing equation
+        anchor_prices = self.cashflows.values.T @ self.anchor_weights
+        net_prices = self.prices.values - anchor_prices * self.anchor_discount
+
         # The pricing equation is linear on the knot discount factors, so the
         # weighted least squares problem
         #     min || sqrt(W) (C' d - p) || ** 2
         # is solved directly, without an iterative optimizer
         sqrt_weights = np.sqrt(self.weights.values)
         weighted_cashflows = knot_cashflows.T * sqrt_weights[:, None]
-        weighted_prices = self.prices.values * sqrt_weights
+        weighted_prices = net_prices * sqrt_weights
 
         discount_factors, _, rank, _ = np.linalg.lstsq(
             weighted_cashflows, weighted_prices, rcond=None)
